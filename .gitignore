@@ -1,0 +1,59 @@
+# Ignorar arquivos de build do Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Ignorar arquivos do Eclipse
+.project
+.classpath
+.settings/
+bin/
+
+# Ignorar arquivos do IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Ignorar arquivos do NetBeans
+nbproject/private/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+# Ignorar arquivos do VS Code
+.vscode/
+
+# Ignorar arquivos de log
+*.log
+logs/
+
+# Ignorar arquivos temporários do OS
+.DS_Store
+Thumbs.db
+
+# Ignorar arquivos do Docker
+.dockerignore
+
+# Ignorar dados do PostgreSQL
+postgres_data/
+
+# Ignorar arquivos de configuração local
+application-local.properties
+application-local.yml
+
+# Ignorar arquivos de backup
+*.bak
+*.backup
+
+# Ignorar diretório de uploads (se houver)
+uploads/
+files/
