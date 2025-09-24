@@ -4,8 +4,8 @@ Sistema de CRM (Customer Relationship Management) desenvolvido em Java com Sprin
 
 ## 🚀 Tecnologias Utilizadas
 
-- **Java 17** (LTS)
-- **Spring Boot 3.x**
+- **Java 21** (LTS) ⚡ *Atualizado para a versão mais recente*
+- **Spring Boot 3.3.6** (compatível com Java 21)
 - **Spring Data JPA**
 - **PostgreSQL**
 - **Maven**
@@ -26,11 +26,29 @@ Sistema de CRM (Customer Relationship Management) desenvolvido em Java com Sprin
 - Relatórios e estatísticas
 - Documentação automática com Swagger
 
+## ⬆️ Upgrade para Java 21
+
+Este projeto foi **atualizado para Java 21 LTS** (setembro 2024), a versão mais recente e estável do Java.
+
+### ✅ O que foi atualizado:
+- **Java Runtime**: 17 → 21 (LTS)
+- **Spring Boot**: 3.2.0 → 3.3.6 (compatibilidade total com Java 21)
+- **Dockerfile**: Atualizado para `eclipse-temurin:21`
+- **Maven**: Configuração de compilação para Java 21
+- **Dependências**: Todas compatíveis com Java 21
+
+### 🚀 Benefícios do Java 21:
+- **Performance melhorada** em relação ao Java 17
+- **Novos recursos de linguagem** (Pattern Matching, Virtual Threads, etc.)
+- **Suporte LTS** até 2031
+- **Melhor garbage collection**
+- **Compatibilidade completa** com Spring Boot 3.3.x
+
 ## 🛠️ Como Executar
 
 ### Pré-requisitos
 - **Docker e Docker Compose** (obrigatório)
-- **Java 17+** (opcional - apenas para desenvolvimento local)
+- **Java 21+** (opcional - apenas para desenvolvimento local)
 - **Maven 3.6+** (opcional - apenas para desenvolvimento local)
 
 ### Executando com Docker (Recomendado - Não precisa instalar Maven)
