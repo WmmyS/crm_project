@@ -31,7 +31,7 @@ public class ClienteController {
     @GetMapping
     @Operation(summary = "📋 Listar clientes", description = "🔐 **Requer Autenticação** - Lista todos os clientes com paginação. Use JWT Token ou API Key.")
     @SecurityRequirement(name = "BearerAuth")
-    @SecurityRequirement(name = "ApiKeyAuth")
+    @SecurityRequirement(name = "AppTokenAuth")
     public Page<ClienteDTO> listarTodos(
             @PageableDefault(size = 20, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable) {
         return clienteService.listarTodos(pageable);

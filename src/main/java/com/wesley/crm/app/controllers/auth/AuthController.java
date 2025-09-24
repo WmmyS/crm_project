@@ -1,15 +1,16 @@
 package com.wesley.crm.app.controllers.auth;
 
-import com.wesley.crm.app.models.dtos.auth.ApiKeyRequestDTO;
-import com.wesley.crm.app.models.dtos.auth.ApiKeyResponseDTO;
+import com.wesley.crm.app.models.dtos.auth.AppLoginRequestDTO;
+import com.wesley.crm.app.models.dtos.auth.AppLoginResponseDTO;
 import com.wesley.crm.app.models.dtos.auth.LoginRequestDTO;
 import com.wesley.crm.app.models.dtos.auth.LoginResponseDTO;
 import com.wesley.crm.app.models.dtos.auth.RegisterRequestDTO;
 import com.wesley.crm.app.models.dtos.auth.RegisterResponseDTO;
-import com.wesley.crm.app.models.dtos.auth.RotatingTokenResponseDTO;
-import com.wesley.crm.app.services.ApiKeyService;
+
+import com.wesley.crm.app.services.ApplicationTokenService;
 import com.wesley.crm.app.services.AuthService;
-import com.wesley.crm.app.services.RotatingTokenService;
+import com.wesley.crm.config.AppAuthProperties;
+
 import com.wesley.crm.exceptions.CrmException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -25,22 +26,23 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.time.LocalDateTime;
+
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
-@Tag(name = "Autenticação", description = "Endpoints para autenticação e gerenciamento de API Keys")
+@Tag(name = "Autenticação", description = "Endpoints para autenticação de usuários e aplicações")
 public class AuthController {
 
   @Autowired
   private AuthService authService;
 
   @Autowired
-  private ApiKeyService apiKeyService;
+  private ApplicationTokenService applicationTokenService;
 
   @Autowired
-  private RotatingTokenService rotatingTokenService;
+  private AppAuthProperties appAuthProperties;
 
   @PostMapping("/register")
   @Operation(summary = "📝 Cadastrar usuário", description = "🆓 **Endpoint PÚBLICO** - Cria novo usuário no sistema. Não requer autenticação.", security = {} // Remove
@@ -60,6 +62,43 @@ public class AuthController {
     try {
       RegisterResponseDTO response = authService.registerUser(registerRequest);
       return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    } catch (CrmException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new CrmException("Erro interno do servidor", HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @PostMapping("/app-login")
+  @Operation(summary = "🔐 Login da Aplicação", description = "🆓 **Endpoint PÚBLICO** - Autentica aplicação e retorna token com duração de 15 minutos. Este token é obrigatório para todas as chamadas da API.", security = {})
+  @ApiResponses(value = {
+      @ApiResponse(responseCode = "200", description = "Login da aplicação realizado com sucesso"),
+      @ApiResponse(responseCode = "401", description = "Credenciais da aplicação inválidas"),
+      @ApiResponse(responseCode = "400", description = "Dados de entrada inválidos")
+  })
+  public ResponseEntity<AppLoginResponseDTO> appLogin(@Valid @RequestBody AppLoginRequestDTO appLoginRequest) {
+    try {
+      // Validação das credenciais da aplicação (configurável via properties)
+      if (!appAuthProperties.getUsername().equals(appLoginRequest.getUsername()) ||
+          !appAuthProperties.getPassword().equals(appLoginRequest.getPassword())) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            .body(new AppLoginResponseDTO(null, "error", 0, null));
+      }
+
+      // Gerar token da aplicação
+      String token = applicationTokenService.generateApplicationToken();
+
+      // Criar resposta
+
+      AppLoginResponseDTO response = new AppLoginResponseDTO(
+          token,
+          "Bearer",
+          LocalDateTime.now(),
+          LocalDateTime.now().plusMinutes(15),
+          15,
+          appLoginRequest.getUsername());
+
+      return ResponseEntity.ok(response);
     } catch (CrmException e) {
       throw e;
     } catch (Exception e) {
@@ -125,9 +164,9 @@ public class AuthController {
   }
 
   @GetMapping("/me")
-  @Operation(summary = "👤 Obter dados do usuário", description = "🔐 **Requer Autenticação** - Retorna informações do usuário logado. Use JWT Token ou API Key.")
+  @Operation(summary = "👤 Obter dados do usuário", description = "🔐 **Requer Autenticação** - Retorna informações do usuário logado. Use JWT Token ou Application Token.")
   @SecurityRequirement(name = "BearerAuth")
-  @SecurityRequirement(name = "ApiKeyAuth")
+  @SecurityRequirement(name = "AppTokenAuth")
   @ApiResponses(value = {
       @ApiResponse(responseCode = "200", description = "Dados do usuário retornados com sucesso"),
       @ApiResponse(responseCode = "401", description = "Token inválido")
@@ -142,168 +181,14 @@ public class AuthController {
     return ResponseEntity.ok(userInfo);
   }
 
-  // ===== API Key Management =====
+  // ===== Sistema anterior removido =====
+  // Os endpoints de API Key foram substituídos pelo sistema de Application Token
+  // Use /api/auth/app-login para obter tokens de aplicação
 
-  @PostMapping("/api-keys")
-  @Operation(summary = "🔑 Criar API Key", description = "🔐 **Requer JWT Token** - Cria nova API Key para integração com sistemas externos. A chave criada poderá ser usada como alternativa ao JWT.")
-  @SecurityRequirement(name = "BearerAuth")
-  @ApiResponses(value = {
-      @ApiResponse(responseCode = "201", description = "API Key criada com sucesso - Use a chave retornada no header X-API-Key"),
-      @ApiResponse(responseCode = "400", description = "Dados de entrada inválidos"),
-      @ApiResponse(responseCode = "401", description = "Usuário não autenticado")
-  })
-  public ResponseEntity<ApiKeyResponseDTO> createApiKey(@Valid @RequestBody ApiKeyRequestDTO request) {
-    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    if (authentication == null || !authentication.isAuthenticated()) {
-      throw new CrmException("Usuário não autenticado", HttpStatus.UNAUTHORIZED);
-    }
-
-    ApiKeyResponseDTO response = apiKeyService.createApiKey(request, authentication.getName());
-    return ResponseEntity.status(HttpStatus.CREATED).body(response);
-  }
-
-  @GetMapping("/api-keys")
-  @Operation(summary = "📋 Listar API Keys", description = "🔐 **Requer JWT Token** - Lista todas as API Keys do usuário autenticado.")
-  @SecurityRequirement(name = "BearerAuth")
-  @ApiResponses(value = {
-      @ApiResponse(responseCode = "200", description = "API Keys listadas com sucesso"),
-      @ApiResponse(responseCode = "401", description = "Usuário não autenticado")
-  })
-  public ResponseEntity<List<ApiKeyResponseDTO>> getUserApiKeys() {
-    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    if (authentication == null || !authentication.isAuthenticated()) {
-      throw new CrmException("Usuário não autenticado", HttpStatus.UNAUTHORIZED);
-    }
-
-    List<ApiKeyResponseDTO> apiKeys = apiKeyService.getUserApiKeys(authentication.getName());
-    return ResponseEntity.ok(apiKeys);
-  }
-
-  @DeleteMapping("/api-keys/{id}")
-  @Operation(summary = "❌ Revogar API Key", description = "🔐 **Requer JWT Token** - Revoga uma API Key específica. A chave será desativada imediatamente.")
-  @SecurityRequirement(name = "BearerAuth")
-  @ApiResponses(value = {
-      @ApiResponse(responseCode = "200", description = "API Key revogada com sucesso"),
-      @ApiResponse(responseCode = "404", description = "API Key não encontrada"),
-      @ApiResponse(responseCode = "401", description = "Usuário não autenticado"),
-      @ApiResponse(responseCode = "403", description = "Usuário não possui permissão para revogar esta API Key")
-  })
-  public ResponseEntity<Map<String, String>> revokeApiKey(@PathVariable Long id) {
-    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    if (authentication == null || !authentication.isAuthenticated()) {
-      throw new CrmException("Usuário não autenticado", HttpStatus.UNAUTHORIZED);
-    }
-
-    apiKeyService.revokeApiKey(id, authentication.getName());
-    return ResponseEntity.ok(Map.of("message", "API Key revogada com sucesso"));
-  }
-
-  // ===== Rotating Token Management =====
-
-  @PostMapping("/rotating-token/generate")
-  @Operation(summary = "🔄 Gerar Token Rotativo", description = "🗝️ **Requer API Key** - Gera um token rotativo de 15 minutos para acesso seguro do frontend. Use no header X-Rotating-Token junto com X-API-Key.", security = {})
-  @ApiResponses(value = {
-      @ApiResponse(responseCode = "201", description = "Token rotativo gerado com sucesso"),
-      @ApiResponse(responseCode = "401", description = "API Key inválida"),
-      @ApiResponse(responseCode = "400", description = "Dados de entrada inválidos")
-  })
-  public ResponseEntity<RotatingTokenResponseDTO> generateRotatingToken(HttpServletRequest request) {
-    String apiKey = request.getHeader("X-API-Key");
-    if (apiKey == null || apiKey.trim().isEmpty()) {
-      throw new CrmException("API Key obrigatória no header X-API-Key", HttpStatus.BAD_REQUEST);
-    }
-
-    try {
-      String token = rotatingTokenService.generateRotatingToken(apiKey);
-      var tokenInfo = rotatingTokenService.getActiveToken(apiKey);
-
-      if (tokenInfo.isPresent()) {
-        RotatingTokenResponseDTO response = new RotatingTokenResponseDTO(
-            token,
-            tokenInfo.get().getExpiresAt(),
-            "success",
-            "Token rotativo gerado com sucesso. Expira em 15 minutos.");
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-      } else {
-        throw new CrmException("Erro ao gerar token", HttpStatus.INTERNAL_SERVER_ERROR);
-      }
-    } catch (CrmException e) {
-      throw e;
-    } catch (Exception e) {
-      throw new CrmException("Erro interno do servidor", HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-  }
-
-  @PostMapping("/rotating-token/renew")
-  @Operation(summary = "🔄 Renovar Token Rotativo", description = "🗝️ **Requer API Key** - Renova ou estende o tempo de expiração do token rotativo atual.", security = {})
-  @ApiResponses(value = {
-      @ApiResponse(responseCode = "200", description = "Token renovado com sucesso"),
-      @ApiResponse(responseCode = "401", description = "API Key inválida")
-  })
-  public ResponseEntity<RotatingTokenResponseDTO> renewRotatingToken(HttpServletRequest request) {
-    String apiKey = request.getHeader("X-API-Key");
-    if (apiKey == null || apiKey.trim().isEmpty()) {
-      throw new CrmException("API Key obrigatória no header X-API-Key", HttpStatus.BAD_REQUEST);
-    }
-
-    try {
-      String token = rotatingTokenService.renewRotatingToken(apiKey);
-      var tokenInfo = rotatingTokenService.getActiveToken(apiKey);
-
-      if (tokenInfo.isPresent()) {
-        RotatingTokenResponseDTO response = new RotatingTokenResponseDTO(
-            token,
-            tokenInfo.get().getExpiresAt(),
-            "renewed",
-            "Token rotativo renovado com sucesso.");
-        return ResponseEntity.ok(response);
-      } else {
-        throw new CrmException("Erro ao renovar token", HttpStatus.INTERNAL_SERVER_ERROR);
-      }
-    } catch (CrmException e) {
-      throw e;
-    } catch (Exception e) {
-      throw new CrmException("Erro interno do servidor", HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-  }
-
-  @GetMapping("/rotating-token/status")
-  @Operation(summary = "📊 Status do Token Rotativo", description = "🗝️ **Requer API Key** - Verifica o status do token rotativo atual (tempo restante, validade, etc.).", security = {})
-  @ApiResponses(value = {
-      @ApiResponse(responseCode = "200", description = "Status obtido com sucesso"),
-      @ApiResponse(responseCode = "401", description = "API Key inválida"),
-      @ApiResponse(responseCode = "404", description = "Nenhum token ativo encontrado")
-  })
-  public ResponseEntity<RotatingTokenResponseDTO> getRotatingTokenStatus(HttpServletRequest request) {
-    String apiKey = request.getHeader("X-API-Key");
-    if (apiKey == null || apiKey.trim().isEmpty()) {
-      throw new CrmException("API Key obrigatória no header X-API-Key", HttpStatus.BAD_REQUEST);
-    }
-
-    try {
-      var tokenInfo = rotatingTokenService.getActiveToken(apiKey);
-
-      if (tokenInfo.isEmpty()) {
-        RotatingTokenResponseDTO response = new RotatingTokenResponseDTO(
-            null, null, "not_found", "Nenhum token ativo encontrado");
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-      }
-
-      var token = tokenInfo.get();
-      String status = token.isValid() ? "active" : "expired";
-      String message = token.isValid() ? "Token ativo e válido" : "Token expirado, gere um novo";
-
-      RotatingTokenResponseDTO response = new RotatingTokenResponseDTO(
-          token.getToken(),
-          token.getExpiresAt(),
-          status,
-          message);
-
-      return ResponseEntity.ok(response);
-    } catch (Exception e) {
-      throw new CrmException("Erro ao verificar status do token", HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-  }
+  // ===== Sistema anterior removido =====
+  // Os endpoints de Rotating Token foram substituídos pelo sistema de Application
+  // Token
+  // Use /api/auth/app-login para obter tokens de aplicação
 
   // ===== Helper Methods =====
 

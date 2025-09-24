@@ -22,52 +22,52 @@ public class OpenApiConfig {
                                                 .description("""
                                                                 ## 🚀 API REST para sistema de CRM (Customer Relationship Management)
 
-                                                                ### 🔐 Sistema de Autenticação Tripla Obrigatória
+                                                                ### 🔐 Sistema de Autenticação Dual Simplificado
 
-                                                                **⚠️ IMPORTANTE**: Esta API requer **3 TOKENS OBRIGATÓRIOS** para todos os endpoints protegidos:
+                                                                Esta API oferece **2 TIPOS DE AUTENTICAÇÃO** para diferentes cenários:
 
-                                                                #### 🔑 Fluxo Completo de Autenticação:
-
-                                                                **1. � Obter JWT Token (identifica o usuário):**
+                                                                #### 👥 1. Autenticação de Usuário (Interface Web/Mobile)
+                                                                **Para usuários do sistema:**
                                                                 ```
                                                                 POST /api/auth/register → Criar conta (público)
-                                                                POST /api/auth/login → { "login": "seu_usuario", "password": "senha" }
+                                                                POST /api/auth/login → { "email": "user@email.com", "senha": "senha" }
                                                                 ```
-
-                                                                **2. 🗝️ Obter API Key (identifica a aplicação):**
-                                                                ```
-                                                                POST /api/auth/api-key → Usar JWT para criar API Key
-                                                                ```
-
-                                                                **3. 🔄 Gerar Rotating Token (prova de legitimidade - 15min):**
-                                                                ```
-                                                                POST /api/auth/rotating-token/generate → Usar JWT + API Key
-                                                                ```
-
-                                                                **4. 🛡️ Usar nos endpoints protegidos (TODOS OS 3 OBRIGATÓRIOS):**
+                                                                **Uso nos endpoints:**
                                                                 ```
                                                                 Authorization: Bearer <jwt-token>
-                                                                X-API-Key: <sua-api-key>
-                                                                X-Rotating-Token: <rotating-token>
+                                                                ```
+
+                                                                #### 🤖 2. Autenticação de Aplicação (Integração/API)
+                                                                **Para aplicações que acessam a API programaticamente:**
+                                                                ```
+                                                                POST /api/auth/app-login → { "username": "<config>", "password": "<config>" }
+                                                                ```
+                                                                **Credenciais configuráveis via properties (padrão: appuser/appsecret)**
+                                                                **Uso nos endpoints:**
+                                                                ```
+                                                                X-App-Token: <application-token>
                                                                 ```
 
                                                                 ### 📋 Como testar no Swagger:
-                                                                1. **Registrar**: Use `/api/auth/register` (não precisa auth)
-                                                                2. **Login**: Use `/api/auth/login` com `{"login": "usuario", "password": "senha"}`
-                                                                3. **Authorize**: Clique em "Authorize" → Cole JWT Token no BearerAuth
-                                                                4. **API Key**: Crie com `/api/auth/api-key` → Cole no ApiKeyAuth
-                                                                5. **Rotating Token**: Gere com `/api/auth/rotating-token/generate`
-                                                                6. **Testar**: Use qualquer endpoint protegido com os 3 tokens
+
+                                                                **✅ Método 1 - Para Usuários:**
+                                                                1. Use `/api/auth/login` com email e senha de usuário
+                                                                2. Clique em "Authorize" → Cole o JWT Token no campo "BearerAuth"
+                                                                3. Teste qualquer endpoint protegido
+
+                                                                **✅ Método 2 - Para Aplicações/Integração:**
+                                                                1. Use `/api/auth/app-login` com credenciais configuráveis (padrão: appuser/appsecret)
+                                                                2. Clique em "Authorize" → Cole o token no campo "AppTokenAuth"
+                                                                3. Teste qualquer endpoint protegido
 
                                                                 ### ⏰ Expiração dos Tokens:
-                                                                - **JWT Token**: 24 horas
-                                                                - **API Key**: Permanente (até ser revogada)
-                                                                - **Rotating Token**: 15 minutos (renovação automática)
+                                                                - **JWT Token**: 24 horas (usuários)
+                                                                - **Application Token**: 15 minutos (renovação obrigatória)
 
                                                                 ### 🎯 Tipos de Acesso:
                                                                 - **ADMIN**: Acesso completo ao sistema
                                                                 - **USER**: Acesso padrão aos recursos de CRM
-                                                                - **API**: Acesso programático via API Keys
+                                                                - **APPLICATION**: Acesso programático com renovação automática
                                                                 """)
                                                 .contact(new Contact()
                                                                 .name("Wesley")
@@ -79,34 +79,41 @@ public class OpenApiConfig {
 
                                 // Configuração de Segurança
                                 .components(new Components()
-                                                // JWT Bearer Token
+                                                // JWT Bearer Token para usuários
                                                 .addSecuritySchemes("BearerAuth", new SecurityScheme()
                                                                 .type(SecurityScheme.Type.HTTP)
                                                                 .scheme("bearer")
                                                                 .bearerFormat("JWT")
-                                                                .description("🔑 **JWT Token Authentication**\n\n" +
+                                                                .description("🔑 **JWT Token Authentication (Usuários)**\n\n"
+                                                                                +
                                                                                 "1. Registre-se em `/api/auth/register`\n"
                                                                                 +
                                                                                 "2. Faça login em `/api/auth/login`\n" +
                                                                                 "3. Copie o token da resposta\n" +
                                                                                 "4. Cole aqui **sem** o prefixo 'Bearer'"))
 
-                                                // API Key
-                                                .addSecuritySchemes("ApiKeyAuth", new SecurityScheme()
+                                                // Application Token para aplicações
+                                                .addSecuritySchemes("AppTokenAuth", new SecurityScheme()
                                                                 .type(SecurityScheme.Type.APIKEY)
                                                                 .in(SecurityScheme.In.HEADER)
-                                                                .name("X-API-Key")
-                                                                .description("🗝️ **API Key Authentication**\n\n" +
-                                                                                "1. Faça login para obter JWT token\n" +
-                                                                                "2. Use o token para criar API Key em `/api/auth/api-keys`\n"
+                                                                .name("X-App-Token")
+                                                                .description("🤖 **Application Token Authentication**\n\n"
                                                                                 +
-                                                                                "3. Copie a chave da resposta (formato: crm_...)\n"
+                                                                                "1. Faça login da aplicação em `/api/auth/app-login`\n"
                                                                                 +
-                                                                                "4. Cole aqui a chave completa")))
+                                                                                "2. Use credenciais configuradas em `application.properties`\n"
+                                                                                +
+                                                                                "3. **Padrão**: `{\"username\": \"appuser\", \"password\": \"appsecret\"}`\n"
+                                                                                +
+                                                                                "4. Copie o token da resposta (válido por 15 minutos)\n"
+                                                                                +
+                                                                                "5. Cole aqui o token completo\n" +
+                                                                                "6. **Renovação obrigatória a cada 15 minutos**")))
 
-                                // Segurança Global - todas as rotas precisam de autenticação exceto as públicas
+                                // Segurança Global - suporte a ambos os tipos de autenticação
                                 .addSecurityItem(new SecurityRequirement()
-                                                .addList("BearerAuth")
-                                                .addList("ApiKeyAuth"));
+                                                .addList("BearerAuth"))
+                                .addSecurityItem(new SecurityRequirement()
+                                                .addList("AppTokenAuth"));
         }
 }

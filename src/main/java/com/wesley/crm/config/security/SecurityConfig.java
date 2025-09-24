@@ -23,7 +23,7 @@ public class SecurityConfig {
   private JwtAuthenticationFilter jwtAuthenticationFilter;
 
   @Autowired
-  private ApiKeyAuthenticationFilter apiKeyAuthenticationFilter;
+  private ApplicationTokenAuthenticationFilter applicationTokenAuthenticationFilter;
 
   @Autowired
   private JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
@@ -46,9 +46,7 @@ public class SecurityConfig {
         .exceptionHandling(exception -> exception.authenticationEntryPoint(jwtAuthenticationEntryPoint))
         .authorizeHttpRequests(authz -> authz
             // Endpoints públicos (login e cadastro)
-            .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
-            // Endpoints de token rotativo requerem autenticação JWT
-            .requestMatchers("/api/auth/rotating-token/**").authenticated()
+            .requestMatchers("/api/auth/app-login", "/api/auth/login", "/api/auth/register").permitAll()
             .requestMatchers("/debug/**").permitAll()
             .requestMatchers("/actuator/**").permitAll()
             .requestMatchers("/swagger-ui/**").permitAll()
@@ -56,14 +54,14 @@ public class SecurityConfig {
             .requestMatchers("/v3/api-docs/**").permitAll()
             .requestMatchers("/").permitAll()
 
-            // Endpoints que requerem autenticação (JWT ou API Key)
+            // Endpoints que requerem autenticação (Token da Aplicação + JWT)
             .requestMatchers("/api/**").authenticated()
 
             // Qualquer outra requisição
             .anyRequest().authenticated())
         // Adicionar filtros na ordem correta
-        .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-        .addFilterAfter(apiKeyAuthenticationFilter, JwtAuthenticationFilter.class)
+        .addFilterBefore(applicationTokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+        .addFilterAfter(jwtAuthenticationFilter, ApplicationTokenAuthenticationFilter.class)
         .build();
   }
 }

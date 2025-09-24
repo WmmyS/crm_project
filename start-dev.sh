@@ -1,14 +1,20 @@
 #!/bin/bash
 
-echo "🚀 Script de desenvolvimento local do CRM Application"
+echo "� Modo DESENVOLVIMENTO - Sempre rebuild + logs"
+echo "🚀 Iniciando CRM com rebuild automático..."
+echo ""
 
-# Verificar se o Maven está instalado
-if ! command -v mvn &> /dev/null; then
-    echo "❌ Maven não está instalado."
-    echo "💡 Use './start.sh' para execução completa com Docker (recomendado)"
-    echo "💡 Ou instale o Maven: sudo apt install maven"
-    exit 1
-fi
+# Função de cleanup ao sair
+cleanup() {
+    echo ""
+    echo "🧹 Limpando containers..."
+    docker-compose down
+    echo "✅ CRM parado com sucesso!"
+    exit 0
+}
+
+# Configurar trap para cleanup
+trap cleanup SIGINT SIGTERM
 
 # Verificar se o Docker está instalado
 if ! command -v docker-compose &> /dev/null; then
@@ -16,34 +22,28 @@ if ! command -v docker-compose &> /dev/null; then
     exit 1
 fi
 
-echo "✅ Dependências verificadas com sucesso!"
+echo "✅ Docker Compose encontrado!"
 
-# Iniciar apenas o PostgreSQL
-echo "🐳 Iniciando PostgreSQL..."
-docker-compose up postgres -d
+# Sempre parar containers existentes
+echo "� Parando containers existentes..."
+docker-compose down
 
-echo "⏳ Aguardando PostgreSQL inicializar..."
-sleep 5
+# Sempre fazer rebuild
+echo "🔨 Fazendo rebuild do container..."
+echo "⏳ Aguarde... isso pode levar alguns minutos"
+docker-compose build --no-cache
 
-# Limpar builds anteriores
-echo "🧹 Limpando builds anteriores..."
-mvn clean > /dev/null 2>&1
-
-# Compilar a aplicação
-echo "🔨 Compilando a aplicação..."
-mvn package -DskipTests
-
-if [ $? -ne 0 ]; then
-    echo "❌ Erro ao compilar a aplicação. Verifique o código e tente novamente."
+if [[ $? -eq 0 ]]; then
+    echo "✅ Rebuild concluído com sucesso!"
+else
+    echo "❌ Erro durante o rebuild!"
     exit 1
 fi
 
-echo "✅ Aplicação compilada com sucesso!"
+echo ""
+echo "🚀 Iniciando aplicação com logs..."
+echo "📝 Pressione Ctrl+C para parar a aplicação"
+echo ""
 
-# Executar a aplicação
-echo "🚀 Iniciando aplicação em modo desenvolvimento..."
-echo "   📍 Profile: dev (desenvolvimento local)"
-echo "   🗄️  PostgreSQL: Container Docker"
-echo "   ☕ Aplicação: Processo local"
-
-mvn spring-boot:run -Dspring-boot.run.profiles=dev
+# Iniciar em foreground para ver logs
+docker-compose up
