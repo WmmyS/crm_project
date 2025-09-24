@@ -6,12 +6,15 @@ import com.wesley.crm.app.models.dtos.auth.LoginRequestDTO;
 import com.wesley.crm.app.models.dtos.auth.LoginResponseDTO;
 import com.wesley.crm.app.models.dtos.auth.RegisterRequestDTO;
 import com.wesley.crm.app.models.dtos.auth.RegisterResponseDTO;
+import com.wesley.crm.app.models.dtos.auth.RotatingTokenResponseDTO;
 import com.wesley.crm.app.services.ApiKeyService;
 import com.wesley.crm.app.services.AuthService;
+import com.wesley.crm.app.services.RotatingTokenService;
 import com.wesley.crm.exceptions.CrmException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -36,8 +39,18 @@ public class AuthController {
   @Autowired
   private ApiKeyService apiKeyService;
 
+  @Autowired
+  private RotatingTokenService rotatingTokenService;
+
   @PostMapping("/register")
-  @Operation(summary = "Cadastrar usuário", description = "Cria novo usuário no sistema")
+  @Operation(summary = "📝 Cadastrar usuário", description = "🆓 **Endpoint PÚBLICO** - Cria novo usuário no sistema. Não requer autenticação.", security = {} // Remove
+                                                                                                                                                               // a
+                                                                                                                                                               // autenticação
+                                                                                                                                                               // padrão
+                                                                                                                                                               // para
+                                                                                                                                                               // este
+                                                                                                                                                               // endpoint
+  )
   @ApiResponses(value = {
       @ApiResponse(responseCode = "201", description = "Usuário cadastrado com sucesso"),
       @ApiResponse(responseCode = "409", description = "Username ou email já estão em uso"),
@@ -55,7 +68,14 @@ public class AuthController {
   }
 
   @PostMapping("/login")
-  @Operation(summary = "Realizar login", description = "Autentica usuário e retorna token JWT")
+  @Operation(summary = "🔐 Realizar login", description = "🆓 **Endpoint PÚBLICO** - Autentica usuário e retorna token JWT. Use o token retornado nos próximos endpoints.", security = {} // Remove
+                                                                                                                                                                                          // a
+                                                                                                                                                                                          // autenticação
+                                                                                                                                                                                          // padrão
+                                                                                                                                                                                          // para
+                                                                                                                                                                                          // este
+                                                                                                                                                                                          // endpoint
+  )
   @ApiResponses(value = {
       @ApiResponse(responseCode = "200", description = "Login realizado com sucesso"),
       @ApiResponse(responseCode = "401", description = "Credenciais inválidas"),
@@ -71,7 +91,8 @@ public class AuthController {
   }
 
   @PostMapping("/refresh")
-  @Operation(summary = "Renovar token", description = "Renova token JWT válido")
+  @Operation(summary = "🔄 Renovar token", description = "🔐 **Requer JWT Token** - Renova token JWT válido para estender a sessão.")
+  @SecurityRequirement(name = "BearerAuth")
   @ApiResponses(value = {
       @ApiResponse(responseCode = "200", description = "Token renovado com sucesso"),
       @ApiResponse(responseCode = "401", description = "Token inválido ou expirado")
@@ -87,7 +108,8 @@ public class AuthController {
   }
 
   @PostMapping("/logout")
-  @Operation(summary = "Realizar logout", description = "Invalida token JWT atual")
+  @Operation(summary = "🚪 Realizar logout", description = "🔐 **Requer JWT Token** - Invalida token JWT atual e adiciona à blacklist.")
+  @SecurityRequirement(name = "BearerAuth")
   @ApiResponses(value = {
       @ApiResponse(responseCode = "200", description = "Logout realizado com sucesso"),
       @ApiResponse(responseCode = "401", description = "Token inválido")
@@ -103,7 +125,9 @@ public class AuthController {
   }
 
   @GetMapping("/me")
-  @Operation(summary = "Obter dados do usuário", description = "Retorna informações do usuário logado")
+  @Operation(summary = "👤 Obter dados do usuário", description = "🔐 **Requer Autenticação** - Retorna informações do usuário logado. Use JWT Token ou API Key.")
+  @SecurityRequirement(name = "BearerAuth")
+  @SecurityRequirement(name = "ApiKeyAuth")
   @ApiResponses(value = {
       @ApiResponse(responseCode = "200", description = "Dados do usuário retornados com sucesso"),
       @ApiResponse(responseCode = "401", description = "Token inválido")
@@ -121,9 +145,10 @@ public class AuthController {
   // ===== API Key Management =====
 
   @PostMapping("/api-keys")
-  @Operation(summary = "Criar API Key", description = "Cria nova API Key para o usuário autenticado")
+  @Operation(summary = "🔑 Criar API Key", description = "🔐 **Requer JWT Token** - Cria nova API Key para integração com sistemas externos. A chave criada poderá ser usada como alternativa ao JWT.")
+  @SecurityRequirement(name = "BearerAuth")
   @ApiResponses(value = {
-      @ApiResponse(responseCode = "201", description = "API Key criada com sucesso"),
+      @ApiResponse(responseCode = "201", description = "API Key criada com sucesso - Use a chave retornada no header X-API-Key"),
       @ApiResponse(responseCode = "400", description = "Dados de entrada inválidos"),
       @ApiResponse(responseCode = "401", description = "Usuário não autenticado")
   })
@@ -138,7 +163,8 @@ public class AuthController {
   }
 
   @GetMapping("/api-keys")
-  @Operation(summary = "Listar API Keys", description = "Lista todas as API Keys do usuário autenticado")
+  @Operation(summary = "📋 Listar API Keys", description = "🔐 **Requer JWT Token** - Lista todas as API Keys do usuário autenticado.")
+  @SecurityRequirement(name = "BearerAuth")
   @ApiResponses(value = {
       @ApiResponse(responseCode = "200", description = "API Keys listadas com sucesso"),
       @ApiResponse(responseCode = "401", description = "Usuário não autenticado")
@@ -154,7 +180,8 @@ public class AuthController {
   }
 
   @DeleteMapping("/api-keys/{id}")
-  @Operation(summary = "Revogar API Key", description = "Revoga uma API Key específica")
+  @Operation(summary = "❌ Revogar API Key", description = "🔐 **Requer JWT Token** - Revoga uma API Key específica. A chave será desativada imediatamente.")
+  @SecurityRequirement(name = "BearerAuth")
   @ApiResponses(value = {
       @ApiResponse(responseCode = "200", description = "API Key revogada com sucesso"),
       @ApiResponse(responseCode = "404", description = "API Key não encontrada"),
@@ -169,6 +196,113 @@ public class AuthController {
 
     apiKeyService.revokeApiKey(id, authentication.getName());
     return ResponseEntity.ok(Map.of("message", "API Key revogada com sucesso"));
+  }
+
+  // ===== Rotating Token Management =====
+
+  @PostMapping("/rotating-token/generate")
+  @Operation(summary = "🔄 Gerar Token Rotativo", description = "🗝️ **Requer API Key** - Gera um token rotativo de 15 minutos para acesso seguro do frontend. Use no header X-Rotating-Token junto com X-API-Key.", security = {})
+  @ApiResponses(value = {
+      @ApiResponse(responseCode = "201", description = "Token rotativo gerado com sucesso"),
+      @ApiResponse(responseCode = "401", description = "API Key inválida"),
+      @ApiResponse(responseCode = "400", description = "Dados de entrada inválidos")
+  })
+  public ResponseEntity<RotatingTokenResponseDTO> generateRotatingToken(HttpServletRequest request) {
+    String apiKey = request.getHeader("X-API-Key");
+    if (apiKey == null || apiKey.trim().isEmpty()) {
+      throw new CrmException("API Key obrigatória no header X-API-Key", HttpStatus.BAD_REQUEST);
+    }
+
+    try {
+      String token = rotatingTokenService.generateRotatingToken(apiKey);
+      var tokenInfo = rotatingTokenService.getActiveToken(apiKey);
+
+      if (tokenInfo.isPresent()) {
+        RotatingTokenResponseDTO response = new RotatingTokenResponseDTO(
+            token,
+            tokenInfo.get().getExpiresAt(),
+            "success",
+            "Token rotativo gerado com sucesso. Expira em 15 minutos.");
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+      } else {
+        throw new CrmException("Erro ao gerar token", HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+    } catch (CrmException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new CrmException("Erro interno do servidor", HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @PostMapping("/rotating-token/renew")
+  @Operation(summary = "🔄 Renovar Token Rotativo", description = "🗝️ **Requer API Key** - Renova ou estende o tempo de expiração do token rotativo atual.", security = {})
+  @ApiResponses(value = {
+      @ApiResponse(responseCode = "200", description = "Token renovado com sucesso"),
+      @ApiResponse(responseCode = "401", description = "API Key inválida")
+  })
+  public ResponseEntity<RotatingTokenResponseDTO> renewRotatingToken(HttpServletRequest request) {
+    String apiKey = request.getHeader("X-API-Key");
+    if (apiKey == null || apiKey.trim().isEmpty()) {
+      throw new CrmException("API Key obrigatória no header X-API-Key", HttpStatus.BAD_REQUEST);
+    }
+
+    try {
+      String token = rotatingTokenService.renewRotatingToken(apiKey);
+      var tokenInfo = rotatingTokenService.getActiveToken(apiKey);
+
+      if (tokenInfo.isPresent()) {
+        RotatingTokenResponseDTO response = new RotatingTokenResponseDTO(
+            token,
+            tokenInfo.get().getExpiresAt(),
+            "renewed",
+            "Token rotativo renovado com sucesso.");
+        return ResponseEntity.ok(response);
+      } else {
+        throw new CrmException("Erro ao renovar token", HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+    } catch (CrmException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new CrmException("Erro interno do servidor", HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @GetMapping("/rotating-token/status")
+  @Operation(summary = "📊 Status do Token Rotativo", description = "🗝️ **Requer API Key** - Verifica o status do token rotativo atual (tempo restante, validade, etc.).", security = {})
+  @ApiResponses(value = {
+      @ApiResponse(responseCode = "200", description = "Status obtido com sucesso"),
+      @ApiResponse(responseCode = "401", description = "API Key inválida"),
+      @ApiResponse(responseCode = "404", description = "Nenhum token ativo encontrado")
+  })
+  public ResponseEntity<RotatingTokenResponseDTO> getRotatingTokenStatus(HttpServletRequest request) {
+    String apiKey = request.getHeader("X-API-Key");
+    if (apiKey == null || apiKey.trim().isEmpty()) {
+      throw new CrmException("API Key obrigatória no header X-API-Key", HttpStatus.BAD_REQUEST);
+    }
+
+    try {
+      var tokenInfo = rotatingTokenService.getActiveToken(apiKey);
+
+      if (tokenInfo.isEmpty()) {
+        RotatingTokenResponseDTO response = new RotatingTokenResponseDTO(
+            null, null, "not_found", "Nenhum token ativo encontrado");
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+      }
+
+      var token = tokenInfo.get();
+      String status = token.isValid() ? "active" : "expired";
+      String message = token.isValid() ? "Token ativo e válido" : "Token expirado, gere um novo";
+
+      RotatingTokenResponseDTO response = new RotatingTokenResponseDTO(
+          token.getToken(),
+          token.getExpiresAt(),
+          status,
+          message);
+
+      return ResponseEntity.ok(response);
+    } catch (Exception e) {
+      throw new CrmException("Erro ao verificar status do token", HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
   // ===== Helper Methods =====

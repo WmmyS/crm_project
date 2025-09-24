@@ -47,6 +47,8 @@ public class SecurityConfig {
         .authorizeHttpRequests(authz -> authz
             // Endpoints públicos (login e cadastro)
             .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
+            // Endpoints de token rotativo requerem autenticação JWT
+            .requestMatchers("/api/auth/rotating-token/**").authenticated()
             .requestMatchers("/debug/**").permitAll()
             .requestMatchers("/actuator/**").permitAll()
             .requestMatchers("/swagger-ui/**").permitAll()

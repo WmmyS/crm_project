@@ -3,6 +3,9 @@ package com.wesley.crm.app.controllers.cliente;
 import com.wesley.crm.domain.entities.Cliente;
 import com.wesley.crm.app.models.dtos.cliente.ClienteDTO;
 import com.wesley.crm.app.services.ClienteService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -19,12 +22,16 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/clientes")
 @CrossOrigin(origins = "*")
+@Tag(name = "👥 Clientes", description = "Endpoints para gerenciamento de clientes - Requer autenticação via JWT Token ou API Key")
 public class ClienteController {
 
     @Autowired
     private ClienteService clienteService;
 
     @GetMapping
+    @Operation(summary = "📋 Listar clientes", description = "🔐 **Requer Autenticação** - Lista todos os clientes com paginação. Use JWT Token ou API Key.")
+    @SecurityRequirement(name = "BearerAuth")
+    @SecurityRequirement(name = "ApiKeyAuth")
     public Page<ClienteDTO> listarTodos(
             @PageableDefault(size = 20, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable) {
         return clienteService.listarTodos(pageable);
@@ -34,14 +41,14 @@ public class ClienteController {
     public ResponseEntity<ClienteDTO> buscarPorId(@PathVariable Long id) {
         Optional<ClienteDTO> cliente = clienteService.buscarPorId(id);
         return cliente.map(ResponseEntity::ok)
-                     .orElse(ResponseEntity.notFound().build());
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/email/{email}")
     public ResponseEntity<ClienteDTO> buscarPorEmail(@PathVariable String email) {
         Optional<ClienteDTO> cliente = clienteService.buscarPorEmail(email);
         return cliente.map(ResponseEntity::ok)
-                     .orElse(ResponseEntity.notFound().build());
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/buscar")

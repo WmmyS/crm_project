@@ -26,13 +26,43 @@ Sistema de CRM (Customer Relationship Management) desenvolvido em Java com Sprin
 - Relatórios e estatísticas
 - Documentação automática com Swagger
 
-### 🔐 Sistema de Autenticação
-- **Autenticação JWT**: Login seguro com tokens JWT
-- **API Keys**: Chaves de API para integração com sistemas externos
-- **Cadastro de usuários**: Registro público de novos usuários
-- **Controle de acesso**: Sistema baseado em roles (ADMIN, USER, API)
-- **Segurança**: Senhas criptografadas com BCrypt
-- **Middleware**: Filtros de autenticação para JWT e API Keys
+### 🔐 Sistema de Autenticação Tripla
+
+Este CRM implementa um **sistema de autenticação tripla obrigatória** para máxima segurança:
+
+#### **🔑 Três Camadas de Segurança:**
+1. **JWT Token** - Identifica qual **usuário** está usando a aplicação
+2. **API Key** - Identifica qual **aplicação frontend** está fazendo a requisição  
+3. **Rotating Token** - Prova que a aplicação é **legítima** (renova a cada 15min)
+
+#### **📱 Para Aplicações Frontend:**
+```bash
+# Todas as requisições para endpoints protegidos DEVEM incluir:
+Authorization: Bearer <jwt-token>       # Usuário autenticado
+X-API-Key: <sua-api-key>               # Aplicação autorizada
+X-Rotating-Token: <rotating-token>     # Prova de legitimidade
+```
+
+#### **🔄 Fluxo de Autenticação:**
+1. **Login do usuário** → Recebe JWT (24h)
+2. **Aplicação gera rotating token** usando JWT + API Key (15min)
+3. **Aplicação usa os 3 tokens** em todas as chamadas da API
+4. **Sistema valida todos os 3** antes de permitir acesso
+5. **Renovação automática** do rotating token a cada 10-12min
+
+#### **🛡️ Vantagens da Segurança Tripla:**
+- **Controle de usuário**: JWT identifica quem está usando
+- **Controle de aplicação**: API Key fixa identifica qual app frontend
+- **Prova de legitimidade**: Rotating Token com expiração curta (anti-replay)
+- **Zero acesso sem os 3**: Impossível acessar com tokens incompletos
+
+#### **📋 Recursos Implementados:**
+- **Cadastro público** de usuários
+- **Login com JWT** (campo: `login`, não `username`)
+- **Geração de API Keys** via JWT autenticado
+- **Rotating Tokens** com renovação automática
+- **Cleanup automático** de tokens expirados
+- **Logs detalhados** para debug e auditoria
 
 ## ⬆️ Upgrade para Java 21
 
@@ -128,15 +158,67 @@ A documentação completa da API está disponível via Swagger UI:
 - `POST /api/oportunidades` - Criar oportunidade
 - `GET /api/oportunidades/status/{status}` - Por status
 
-## 🔐 Sistema de Autenticação e Segurança
+## 🧪 Como Testar o Sistema de Autenticação Tripla
+
+### � Teste Completo via cURL:
+
+#### **Passo 1: Registrar usuário**
+```bash
+curl -s -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username": "testuser", "password": "test123", "email": "test@email.com", "nome": "Teste User"}'
+```
+
+#### **Passo 2: Fazer login (obter JWT)**
+```bash
+curl -s -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"login": "testuser", "password": "test123"}'
+```
+*Copie o token JWT retornado*
+
+#### **Passo 3: Criar API Key**
+```bash
+curl -s -X POST http://localhost:8080/api/auth/api-key \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer SEU_JWT_TOKEN" \
+  -d '{"name": "Minha App", "description": "Chave para teste"}'
+```
+*Copie a API Key retornada*
+
+#### **Passo 4: Gerar Rotating Token**
+```bash
+curl -s -X POST http://localhost:8080/api/auth/rotating-token/generate \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer SEU_JWT_TOKEN" \
+  -d '{"apiKey": "SUA_API_KEY"}'
+```
+*Copie o rotating token retornado*
+
+#### **Passo 5: Usar endpoint protegido (com os 3 tokens)**
+```bash
+curl -X GET http://localhost:8080/api/clientes \
+  -H "Authorization: Bearer SEU_JWT_TOKEN" \
+  -H "X-API-Key: SUA_API_KEY" \
+  -H "X-Rotating-Token: SEU_ROTATING_TOKEN"
+```
+
+### 🌐 Teste via Swagger UI:
+1. Acesse: `http://localhost:8080/swagger-ui/index.html`
+2. Siga os passos descritos na documentação da API
+3. Use os botões "Authorize" para inserir seus tokens
+
+## �🔐 Sistema de Autenticação e Segurança
 
 ### Características do Sistema
-- **Autenticação JWT**: Tokens seguros com expiração de 24 horas
-- **API Keys**: Chaves para integração com sistemas externos  
+- **Autenticação Tripla Obrigatória**: JWT + API Key + Rotating Token
+- **JWT Tokens**: Seguros com expiração de 24 horas
+- **API Keys**: Identificação fixa de aplicações frontend
+- **Rotating Tokens**: Renovação automática a cada 15 minutos
 - **Cadastro público**: Usuários podem se registrar livremente
 - **Controle de acesso**: Sistema baseado em roles (ADMIN, USER, API)
 - **Criptografia**: Senhas protegidas com BCrypt
-- **Middleware duplo**: Suporte simultâneo a JWT e API Keys
+- **Cleanup automático**: Tokens expirados removidos automaticamente
 
 ### Endpoints de Autenticação
 

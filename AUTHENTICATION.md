@@ -80,39 +80,21 @@ Authorization: Bearer {token}
 }
 ```
 
-### 🔑 Gerenciamento de API Keys
+### 2. API Key + Rotating Token (Para Aplicações Frontend)
 
-#### POST `/api/auth/api-keys`
-Cria uma nova API Key para o usuário autenticado.
+O sistema agora **OBRIGA** o uso de API Key + Rotating Token para todos os endpoints protegidos. Isso garante que apenas sua aplicação frontend autorizada tenha acesso completo ao sistema.
 
-**Headers:**
+#### Criação de API Key
+
+**Endpoint:**
 ```
-Authorization: Bearer {token}
-```
+POST /api/auth/api-key
+Authorization: Bearer <jwt-token>
+Content-Type: application/json
 
-**Request Body:**
-```json
 {
   "name": "Frontend App",
-  "description": "Chave para aplicação frontend",
-  "dataExpiracao": "2024-12-31T23:59:59",  // opcional
-  "limiteUso": 10000                        // opcional
-}
-```
-
-**Response:**
-```json
-{
-  "id": 1,
-  "key": "crm_AbCdEfGhIjKlMnOpQrStUvWxYz123456",
-  "name": "Frontend App",
-  "description": "Chave para aplicação frontend",
-  "isActive": true,
-  "dataCriacao": "2024-01-15T10:00:00",
-  "dataExpiracao": "2024-12-31T23:59:59",
-  "ultimoUso": null,
-  "contadorUso": 0,
-  "limiteUso": 10000
+  "description": "Chave para aplicação frontend"
 }
 ```
 
@@ -157,13 +139,23 @@ Authorization: Bearer {token}
 }
 ```
 
-## Autenticação via API Key
+## Sistema de Tripla Autenticação
 
-Para usar API Keys nas requisições, adicione o header:
+Para acessar **QUALQUER** endpoint protegido, sua aplicação frontend **DEVE OBRIGATORIAMENTE** enviar **TODOS OS 3 HEADERS**:
 
-```
+```http
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 X-API-Key: crm_AbCdEfGhIjKlMnOpQrStUvWxYz123456
+X-Rotating-Token: rt_abc123defg456hijklmn789...
 ```
+
+### **O que cada token identifica:**
+
+- **JWT Token** (`Authorization: Bearer`): **Qual usuário** está usando a aplicação
+- **API Key** (`X-API-Key`): **Qual aplicação frontend** está fazendo a requisição  
+- **Rotating Token** (`X-Rotating-Token`): **Prova que a aplicação é legítima** (renova a cada 15min)
+
+> ⚠️ **CRÍTICO**: Sem esses **TRÊS** headers, **TODAS** as requisições para endpoints protegidos (`/api/*`) serão **IMEDIATAMENTE REJEITADAS**. Este sistema garante tanto a identidade do usuário quanto a legitimidade da aplicação frontend.
 
 ## Segurança
 
