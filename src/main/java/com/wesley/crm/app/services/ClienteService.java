@@ -1,11 +1,8 @@
 package com.wesley.crm.app.services;
 
 import com.wesley.crm.domain.entities.Cliente;
-import com.wesley.crm.domain.entities.Empresa;
-import com.wesley.crm.app.models.dtos.cliente.ClienteRequestDTO;
-import com.wesley.crm.app.models.dtos.cliente.ClienteResponseDTO;
+import com.wesley.crm.app.models.dtos.cliente.ClienteDTO;
 import com.wesley.crm.infra.database.ClienteRepository;
-import com.wesley.crm.infra.database.EmpresaRepository;
 import com.wesley.crm.exceptions.CrmException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -74,7 +71,7 @@ public class ClienteService {
                 .map(cliente -> {
                     validarCliente(clienteAtualizado);
                     validarEmailUnico(clienteAtualizado.getEmail(), id);
-                    
+
                     cliente.setNome(clienteAtualizado.getNome());
                     cliente.setEmail(clienteAtualizado.getEmail());
                     cliente.setTelefone(clienteAtualizado.getTelefone());
@@ -86,7 +83,7 @@ public class ClienteService {
                     cliente.setCep(clienteAtualizado.getCep());
                     cliente.setStatus(clienteAtualizado.getStatus());
                     cliente.setEmpresa(clienteAtualizado.getEmpresa());
-                    
+
                     return clienteRepository.save(cliente);
                 })
                 .orElseThrow(() -> new CrmException("Cliente não encontrado com ID: " + id));
@@ -132,21 +129,20 @@ public class ClienteService {
     // Método para converter Cliente para ClienteDTO
     private ClienteDTO convertToDTO(Cliente cliente) {
         return new ClienteDTO(
-            cliente.getId(),
-            cliente.getNome(),
-            cliente.getEmail(),
-            cliente.getTelefone(),
-            cliente.getCpf(),
-            cliente.getDataNascimento(),
-            cliente.getEndereco(),
-            cliente.getCidade(),
-            cliente.getEstado(),
-            cliente.getCep(),
-            cliente.getStatus() != null ? cliente.getStatus().toString() : null,
-            cliente.getDataCriacao(),
-            cliente.getDataAtualizacao(),
-            cliente.getEmpresa() != null ? cliente.getEmpresa().getId() : null,
-            cliente.getEmpresa() != null ? cliente.getEmpresa().getNome() : null
-        );
+                cliente.getId(),
+                cliente.getNome(),
+                cliente.getEmail(),
+                cliente.getTelefone(),
+                cliente.getCpf(),
+                cliente.getDataNascimento(),
+                cliente.getEndereco(),
+                cliente.getCidade(),
+                cliente.getEstado(),
+                cliente.getCep(),
+                cliente.getStatus() != null ? cliente.getStatus().toString() : null,
+                cliente.getDataCriacao(),
+                cliente.getDataAtualizacao(),
+                cliente.getEmpresa() != null ? cliente.getEmpresa().getId() : null,
+                cliente.getEmpresa() != null ? cliente.getEmpresa().getNome() : null);
     }
 }

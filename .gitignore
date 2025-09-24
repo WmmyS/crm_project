@@ -10,6 +10,9 @@ buildNumber.properties
 .mvn/timing.properties
 .mvn/wrapper/maven-wrapper.jar
 
+# Ignorar arquivos compilados (.class) em qualquer lugar
+*.class
+
 # Ignorar arquivos do Eclipse
 .project
 .classpath

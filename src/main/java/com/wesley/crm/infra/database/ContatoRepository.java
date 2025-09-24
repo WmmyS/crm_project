@@ -24,12 +24,12 @@ public interface ContatoRepository extends JpaRepository<Contato, Long> {
     List<Contato> findByStatus(Contato.StatusContato status);
 
     @Query("SELECT c FROM Contato c WHERE c.dataContato BETWEEN :dataInicio AND :dataFim")
-    List<Contato> findByDataContatoBetween(@Param("dataInicio") LocalDateTime dataInicio, 
-                                          @Param("dataFim") LocalDateTime dataFim);
+    List<Contato> findByDataContatoBetween(@Param("dataInicio") LocalDateTime dataInicio,
+            @Param("dataFim") LocalDateTime dataFim);
 
     @Query("SELECT c FROM Contato c WHERE " +
-           "LOWER(c.assunto) LIKE LOWER(CONCAT('%', :termo, '%')) OR " +
-           "LOWER(c.descricao) LIKE LOWER(CONCAT('%', :termo, '%'))")
+            "LOWER(c.assunto) LIKE LOWER(CONCAT('%', :termo, '%')) OR " +
+            "LOWER(c.descricao) LIKE LOWER(CONCAT('%', :termo, '%'))")
     Page<Contato> buscarPorTermo(@Param("termo") String termo, Pageable pageable);
 
     // Relatórios
@@ -38,4 +38,12 @@ public interface ContatoRepository extends JpaRepository<Contato, Long> {
 
     @Query("SELECT COUNT(c) FROM Contato c WHERE c.cliente.id = :clienteId")
     Long countByClienteId(@Param("clienteId") Long clienteId);
+
+    // Métodos para estatísticas
+    Long countByTipo(Contato.TipoContato tipo);
+
+    Long countByStatus(Contato.StatusContato status);
+
+    @Query("SELECT MONTH(c.dataContato), COUNT(c) FROM Contato c GROUP BY MONTH(c.dataContato)")
+    List<Object[]> countContatosPorMes();
 }

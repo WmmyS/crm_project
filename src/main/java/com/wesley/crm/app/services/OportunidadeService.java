@@ -26,7 +26,7 @@ public class OportunidadeService {
 
     @Autowired
     private OportunidadeRepository oportunidadeRepository;
-    
+
     @Autowired
     private ClienteRepository clienteRepository;
 
@@ -58,7 +58,8 @@ public class OportunidadeService {
     }
 
     public Page<OportunidadeResponseDTO> listarPorCliente(Long clienteId, Pageable pageable) {
-        Page<Oportunidade> oportunidades = oportunidadeRepository.findByClienteIdOrderByDataAtualizacaoDesc(clienteId, pageable);
+        Page<Oportunidade> oportunidades = oportunidadeRepository.findByClienteIdOrderByDataAtualizacaoDesc(clienteId,
+                pageable);
         List<OportunidadeResponseDTO> oportunidadeDTOs = oportunidades.getContent().stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -88,14 +89,16 @@ public class OportunidadeService {
     }
 
     public List<OportunidadeResponseDTO> listarPorProbabilidade(Integer probabilidadeMinima) {
-        List<Oportunidade> oportunidades = oportunidadeRepository.findByProbabilidadeFechamentoGreaterThanEqual(probabilidadeMinima);
+        List<Oportunidade> oportunidades = oportunidadeRepository
+                .findByProbabilidadeFechamentoGreaterThanEqual(probabilidadeMinima);
         return oportunidades.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
 
     public List<OportunidadeResponseDTO> listarComFechamentoPrevisto(LocalDate dataInicio, LocalDate dataFim) {
-        List<Oportunidade> oportunidades = oportunidadeRepository.findByDataFechamentoPrevistaBetween(dataInicio, dataFim);
+        List<Oportunidade> oportunidades = oportunidadeRepository.findByDataFechamentoPrevistaBetween(dataInicio,
+                dataFim);
         return oportunidades.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -106,11 +109,11 @@ public class OportunidadeService {
         Oportunidade oportunidade = convertFromDTO(oportunidadeDTO);
         validarOportunidade(oportunidade);
         validarClienteExiste(oportunidadeDTO.getClienteId());
-        
+
         Cliente cliente = clienteRepository.findById(oportunidadeDTO.getClienteId())
                 .orElseThrow(() -> new CrmException("Cliente não encontrado"));
         oportunidade.setCliente(cliente);
-        
+
         Oportunidade oportunidadeSalva = oportunidadeRepository.save(oportunidade);
         return convertToDTO(oportunidadeSalva);
     }
@@ -120,15 +123,15 @@ public class OportunidadeService {
                 .map(oportunidade -> {
                     Oportunidade oportunidadeAtualizada = convertFromDTO(oportunidadeDTO);
                     validarOportunidade(oportunidadeAtualizada);
-                    
-                    if (oportunidadeDTO.getClienteId() != null && 
-                        !oportunidade.getCliente().getId().equals(oportunidadeDTO.getClienteId())) {
+
+                    if (oportunidadeDTO.getClienteId() != null &&
+                            !oportunidade.getCliente().getId().equals(oportunidadeDTO.getClienteId())) {
                         validarClienteExiste(oportunidadeDTO.getClienteId());
                         Cliente cliente = clienteRepository.findById(oportunidadeDTO.getClienteId())
                                 .orElseThrow(() -> new CrmException("Cliente não encontrado"));
                         oportunidade.setCliente(cliente);
                     }
-                    
+
                     oportunidade.setTitulo(oportunidadeAtualizada.getTitulo());
                     oportunidade.setDescricao(oportunidadeAtualizada.getDescricao());
                     oportunidade.setValorEstimado(oportunidadeAtualizada.getValorEstimado());
@@ -136,7 +139,7 @@ public class OportunidadeService {
                     oportunidade.setStatus(oportunidadeAtualizada.getStatus());
                     oportunidade.setDataFechamentoPrevista(oportunidadeAtualizada.getDataFechamentoPrevista());
                     oportunidade.setDataFechamentoReal(oportunidadeAtualizada.getDataFechamentoReal());
-                    
+
                     Oportunidade oportunidadeSalva = oportunidadeRepository.save(oportunidade);
                     return convertToDTO(oportunidadeSalva);
                 })
@@ -161,13 +164,13 @@ public class OportunidadeService {
         return oportunidadeRepository.findById(id)
                 .map(oportunidade -> {
                     validarOportunidade(oportunidadeAtualizada);
-                    
-                    if (oportunidadeAtualizada.getCliente() != null && 
-                        !oportunidade.getCliente().getId().equals(oportunidadeAtualizada.getCliente().getId())) {
+
+                    if (oportunidadeAtualizada.getCliente() != null &&
+                            !oportunidade.getCliente().getId().equals(oportunidadeAtualizada.getCliente().getId())) {
                         validarClienteExiste(oportunidadeAtualizada.getCliente().getId());
                         oportunidade.setCliente(oportunidadeAtualizada.getCliente());
                     }
-                    
+
                     oportunidade.setTitulo(oportunidadeAtualizada.getTitulo());
                     oportunidade.setDescricao(oportunidadeAtualizada.getDescricao());
                     oportunidade.setValorEstimado(oportunidadeAtualizada.getValorEstimado());
@@ -185,23 +188,16 @@ public class OportunidadeService {
         return oportunidadeRepository.findById(id)
                 .map(oportunidade -> {
                     oportunidade.setStatus(novoStatus);
-                    
+
                     // Se fechou (ganho ou perdido), definir data de fechamento real
-                    if (novoStatus == Oportunidade.StatusOportunidade.FECHADO || 
-                        novoStatus == Oportunidade.StatusOportunidade.PERDIDO) {
+                    if (novoStatus == Oportunidade.StatusOportunidade.FECHADO ||
+                            novoStatus == Oportunidade.StatusOportunidade.PERDIDO) {
                         oportunidade.setDataFechamentoReal(LocalDate.now());
                     }
-                    
+
                     return oportunidadeRepository.save(oportunidade);
                 })
                 .orElseThrow(() -> new CrmException("Oportunidade não encontrada com ID: " + id));
-    }
-
-    public void deletar(Long id) {
-        if (!oportunidadeRepository.existsById(id)) {
-            throw new CrmException("Oportunidade não encontrada com ID: " + id);
-        }
-        oportunidadeRepository.deleteById(id);
     }
 
     public boolean existePorId(Long id) {
@@ -232,11 +228,11 @@ public class OportunidadeService {
     public Double calcularTaxaConversao() {
         Long totalOportunidades = oportunidadeRepository.count();
         Long oportunidadesFechadas = oportunidadeRepository.countByStatus(Oportunidade.StatusOportunidade.FECHADO);
-        
+
         if (totalOportunidades == 0) {
             return 0.0;
         }
-        
+
         return (oportunidadesFechadas.doubleValue() / totalOportunidades.doubleValue()) * 100;
     }
 
@@ -245,30 +241,31 @@ public class OportunidadeService {
         if (oportunidade.getCliente() == null || oportunidade.getCliente().getId() == null) {
             throw new CrmException("Cliente é obrigatório para a oportunidade");
         }
-        
+
         if (oportunidade.getTitulo() == null || oportunidade.getTitulo().trim().isEmpty()) {
             throw new CrmException("Título da oportunidade é obrigatório");
         }
-        
-        if (oportunidade.getValorEstimado() != null && oportunidade.getValorEstimado().compareTo(BigDecimal.ZERO) <= 0) {
+
+        if (oportunidade.getValorEstimado() != null
+                && oportunidade.getValorEstimado().compareTo(BigDecimal.ZERO) <= 0) {
             throw new CrmException("Valor estimado deve ser maior que zero");
         }
-        
+
         if (oportunidade.getProbabilidadeFechamento() != null) {
             if (oportunidade.getProbabilidadeFechamento() < 0 || oportunidade.getProbabilidadeFechamento() > 100) {
                 throw new CrmException("Probabilidade de fechamento deve estar entre 0 e 100");
             }
         }
-        
+
         // Validar datas
-        if (oportunidade.getDataFechamentoPrevista() != null && 
-            oportunidade.getDataFechamentoPrevista().isBefore(LocalDate.now())) {
+        if (oportunidade.getDataFechamentoPrevista() != null &&
+                oportunidade.getDataFechamentoPrevista().isBefore(LocalDate.now())) {
             throw new CrmException("Data de fechamento prevista não pode ser anterior à data atual");
         }
-        
-        if (oportunidade.getDataFechamentoReal() != null && 
-            oportunidade.getDataFechamentoPrevista() != null &&
-            oportunidade.getDataFechamentoReal().isBefore(oportunidade.getDataFechamentoPrevista())) {
+
+        if (oportunidade.getDataFechamentoReal() != null &&
+                oportunidade.getDataFechamentoPrevista() != null &&
+                oportunidade.getDataFechamentoReal().isBefore(oportunidade.getDataFechamentoPrevista())) {
             throw new CrmException("Data de fechamento real não pode ser anterior à data prevista");
         }
     }
@@ -306,7 +303,15 @@ public class OportunidadeService {
                 oportunidade.getDataFechamentoPrevista(),
                 oportunidade.getDataFechamentoReal(),
                 oportunidade.getDataCriacao(),
-                oportunidade.getDataAtualizacao()
-        );
+                oportunidade.getDataAtualizacao());
+    }
+
+    // Métodos adicionais que estavam faltando
+    public BigDecimal valorTotalPorStatus(Oportunidade.StatusOportunidade status) {
+        return oportunidadeRepository.sumValorEstimadoByStatus(status);
+    }
+
+    public Double probabilidadeMediaPorStatus(Oportunidade.StatusOportunidade status) {
+        return oportunidadeRepository.mediaProbabilidadePorStatus(status);
     }
 }
