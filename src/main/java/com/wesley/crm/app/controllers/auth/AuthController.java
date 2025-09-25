@@ -45,14 +45,7 @@ public class AuthController {
   private AppAuthProperties appAuthProperties;
 
   @PostMapping("/register")
-  @Operation(summary = "📝 Cadastrar usuário", description = "🆓 **Endpoint PÚBLICO** - Cria novo usuário no sistema. Não requer autenticação.", security = {} // Remove
-                                                                                                                                                               // a
-                                                                                                                                                               // autenticação
-                                                                                                                                                               // padrão
-                                                                                                                                                               // para
-                                                                                                                                                               // este
-                                                                                                                                                               // endpoint
-  )
+  @Operation(summary = "📝 Cadastrar usuário", description = "🆓 **Endpoint PÚBLICO** - Cria novo usuário no sistema. Não requer autenticação.", security = {})
   @ApiResponses(value = {
       @ApiResponse(responseCode = "201", description = "Usuário cadastrado com sucesso"),
       @ApiResponse(responseCode = "409", description = "Username ou email já estão em uso"),
@@ -70,7 +63,7 @@ public class AuthController {
   }
 
   @PostMapping("/app-login")
-  @Operation(summary = "🔐 Login da Aplicação", description = "🆓 **Endpoint PÚBLICO** - Autentica aplicação e retorna token com duração de 15 minutos. Este token é obrigatório para todas as chamadas da API.", security = {})
+  @Operation(summary = "🔐 Login da Aplicação", description = "🆓 **Endpoint PÚBLICO** - Autentica aplicação e retorna Application Token.", security = {})
   @ApiResponses(value = {
       @ApiResponse(responseCode = "200", description = "Login da aplicação realizado com sucesso"),
       @ApiResponse(responseCode = "401", description = "Credenciais da aplicação inválidas"),
@@ -107,14 +100,7 @@ public class AuthController {
   }
 
   @PostMapping("/login")
-  @Operation(summary = "🔐 Realizar login", description = "🆓 **Endpoint PÚBLICO** - Autentica usuário e retorna token JWT. Use o token retornado nos próximos endpoints.", security = {} // Remove
-                                                                                                                                                                                          // a
-                                                                                                                                                                                          // autenticação
-                                                                                                                                                                                          // padrão
-                                                                                                                                                                                          // para
-                                                                                                                                                                                          // este
-                                                                                                                                                                                          // endpoint
-  )
+  @Operation(summary = "🔐 Realizar login", description = "🆓 **Endpoint PÚBLICO** - Autentica usuário e retorna token JWT.", security = {})
   @ApiResponses(value = {
       @ApiResponse(responseCode = "200", description = "Login realizado com sucesso"),
       @ApiResponse(responseCode = "401", description = "Credenciais inválidas"),
@@ -130,8 +116,8 @@ public class AuthController {
   }
 
   @PostMapping("/refresh")
-  @Operation(summary = "🔄 Renovar token", description = "🔐 **Requer JWT Token** - Renova token JWT válido para estender a sessão.")
-  @SecurityRequirement(name = "BearerAuth")
+  @Operation(summary = "🔄 Renovar token", description = "🔐 **Requer JWT Token** - Renova token JWT válido.")
+  @SecurityRequirement(name = "bearerAuth")
   @ApiResponses(value = {
       @ApiResponse(responseCode = "200", description = "Token renovado com sucesso"),
       @ApiResponse(responseCode = "401", description = "Token inválido ou expirado")
@@ -147,8 +133,8 @@ public class AuthController {
   }
 
   @PostMapping("/logout")
-  @Operation(summary = "🚪 Realizar logout", description = "🔐 **Requer JWT Token** - Invalida token JWT atual e adiciona à blacklist.")
-  @SecurityRequirement(name = "BearerAuth")
+  @Operation(summary = "🚪 Realizar logout", description = "🔐 **Requer JWT Token** - Invalida token JWT atual.")
+  @SecurityRequirement(name = "bearerAuth")
   @ApiResponses(value = {
       @ApiResponse(responseCode = "200", description = "Logout realizado com sucesso"),
       @ApiResponse(responseCode = "401", description = "Token inválido")
@@ -164,9 +150,10 @@ public class AuthController {
   }
 
   @GetMapping("/me")
-  @Operation(summary = "👤 Obter dados do usuário", description = "🔐 **Requer Autenticação** - Retorna informações do usuário logado. Use JWT Token ou Application Token.")
-  @SecurityRequirement(name = "BearerAuth")
-  @SecurityRequirement(name = "AppTokenAuth")
+  @Operation(summary = "👤 Obter dados do usuário", description = "🔐 **Requer Autenticação Tripla** - JWT + API Key + Application Token.")
+  @SecurityRequirement(name = "bearerAuth")
+  @SecurityRequirement(name = "apiKey")
+  @SecurityRequirement(name = "applicationToken")
   @ApiResponses(value = {
       @ApiResponse(responseCode = "200", description = "Dados do usuário retornados com sucesso"),
       @ApiResponse(responseCode = "401", description = "Token inválido")

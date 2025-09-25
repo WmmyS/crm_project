@@ -146,7 +146,7 @@ RETURN NEW;
 
 END;
 
-$ $ language 'plpgsql';
+$ $ LANGUAGE 'plpgsql';
 
 -- Aplicar triggers nas tabelas
 DROP TRIGGER IF EXISTS update_empresas_timestamp ON empresas;

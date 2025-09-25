@@ -1,14 +1,12 @@
 #!/bin/bash
 
-echo "� Modo DESENVOLVIMENTO - Sempre rebuild + logs"
-echo "🚀 Iniciando CRM com rebuild automático..."
+# Script para modo desenvolvimento local (sem Docker para a aplicação)
+# Uso: ./start-dev.sh
+
+echo "🚀 Iniciando CRM em modo DESENVOLVIMENTO LOCAL..."
 echo ""
 
 # Função de cleanup ao sair
-cleanup() {
-    echo ""
-    echo "🧹 Limpando containers..."
-    docker-compose down
     echo "✅ CRM parado com sucesso!"
     exit 0
 }
@@ -16,34 +14,57 @@ cleanup() {
 # Configurar trap para cleanup
 trap cleanup SIGINT SIGTERM
 
-# Verificar se o Docker está instalado
-if ! command -v docker-compose &> /dev/null; then
-    echo "❌ Docker Compose não está instalado. Por favor, instale o Docker Compose primeiro."
-    exit 1
-fi
+# Verificar se o PostgreSQL está rodando
+check_postgres() {
+    echo "🔍 Verificando PostgreSQL..."
+    
+    if ! docker-compose ps postgres | grep -q "Up"; then
+        echo "🐘 Iniciando PostgreSQL via Docker..."
+        docker-compose up -d postgres
+        
+        # Aguardar PostgreSQL estar pronto
+        echo "⏳ Aguardando PostgreSQL inicializar..."
+        sleep 5
+        
+        # Verificar se está rodando
+        for i in {1..30}; do
+            if docker-compose ps postgres | grep -q "Up"; then
+                echo "✅ PostgreSQL está rodando!"
+                break
+            fi
+            echo "⏳ Aguardando PostgreSQL... ($i/30)"
+            sleep 1
+        done
+    else
+        echo "✅ PostgreSQL já está rodando!"
+    fi
+}
 
-echo "✅ Docker Compose encontrado!"
+# Função principal
+main() {
+    # Verificar PostgreSQL
+    check_postgres
+    
+    echo ""
+    echo "� Iniciando em modo DEV com hot reload..."
+    echo "📝 Pressione Ctrl+C para parar a aplicação"
+    echo "💡 O DevTools fará reload automático quando você alterar arquivos!"
+    echo "🌐 Aplicação estará disponível em: http://localhost:8080"
+    echo ""
+    
+    # Definir profile de desenvolvimento
+    export SPRING_PROFILES_ACTIVE=dev
+    
+    # Configurações para desenvolvimento local
+    export DB_HOST=localhost
+    export DB_PORT=5432
+    export DB_NAME=crm_db
+    export DB_USER=crm_user
+    export DB_PASSWORD=crm_password
+    
+    # Executar aplicação Spring Boot com Maven
+    mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dspring.devtools.restart.enabled=true -Dspring.devtools.livereload.enabled=true"
+}
 
-# Sempre parar containers existentes
-echo "� Parando containers existentes..."
-docker-compose down
-
-# Sempre fazer rebuild
-echo "🔨 Fazendo rebuild do container..."
-echo "⏳ Aguarde... isso pode levar alguns minutos"
-docker-compose build --no-cache
-
-if [[ $? -eq 0 ]]; then
-    echo "✅ Rebuild concluído com sucesso!"
-else
-    echo "❌ Erro durante o rebuild!"
-    exit 1
-fi
-
-echo ""
-echo "🚀 Iniciando aplicação com logs..."
-echo "📝 Pressione Ctrl+C para parar a aplicação"
-echo ""
-
-# Iniciar em foreground para ver logs
-docker-compose up
+# Executar função principal
+main

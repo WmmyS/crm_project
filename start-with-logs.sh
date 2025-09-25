@@ -12,30 +12,22 @@ fi
 
 # Função para detectar se houve mudanças no código
 check_for_changes() {
-    echo "� Verificando mudanças no código..."
+    echo "� Verificando status dos containers..."
     
     # Verificar se existe um container rodando
     if docker-compose ps | grep -q "Up"; then
         echo "📦 Container já está rodando"
-        
-        # Verificar timestamp do último build vs mudanças recentes no código
-        LAST_BUILD=$(docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}" | grep "www_crm-app" | head -1 | awk '{print $3 " " $4}')
-        
-        # Verificar se há arquivos .java ou pom.xml modificados recentemente
-        RECENT_CHANGES=$(find ./src -name "*.java" -newer docker-compose.yml 2>/dev/null | wc -l)
-        POM_CHANGES=$(find . -name "pom.xml" -newer docker-compose.yml 2>/dev/null | wc -l)
-        
-        if [[ $RECENT_CHANGES -gt 0 ]] || [[ $POM_CHANGES -gt 0 ]]; then
-            echo "⚠️  Detectadas mudanças no código desde o último build!"
-            echo "� Será necessário rebuild do container..."
-            return 0  # Precisa rebuild
-        else
-            echo "✅ Código não foi modificado desde o último build"
-            return 1  # Não precisa rebuild
-        fi
+        return 1  # Não precisa rebuild
     else
         echo "📦 Nenhum container rodando"
-        return 0  # Precisa build inicial
+        # Verificar se existe imagem local
+        if docker images | grep -q "www_crm-app"; then
+            echo "🖥️  Imagem local encontrada"
+            return 1  # Não precisa rebuild
+        else
+            echo "🔨 Imagem não encontrada, será necessário build inicial"
+            return 0  # Precisa build inicial
+        fi
     fi
 }
 
@@ -71,14 +63,10 @@ main() {
     else
         # Verificar automaticamente se precisa rebuild
         if check_for_changes; then
-            echo ""
-            read -p "❓ Detectadas mudanças. Fazer rebuild automático? (y/N): " -n 1 -r
-            echo ""
-            if [[ $REPLY =~ ^[Yy]$ ]]; then
-                do_rebuild
-            else
-                echo "⚠️  Continuando sem rebuild - mudanças podem não aparecer!"
-            fi
+            echo "🔨 Fazendo build inicial..."
+            do_rebuild
+        else
+            echo "✅ Usando imagem existente"
         fi
     fi
     

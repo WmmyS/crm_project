@@ -29,15 +29,20 @@ public class ClienteController {
     private ClienteService clienteService;
 
     @GetMapping
-    @Operation(summary = "📋 Listar clientes", description = "🔐 **Requer Autenticação** - Lista todos os clientes com paginação. Use JWT Token ou API Key.")
-    @SecurityRequirement(name = "BearerAuth")
-    @SecurityRequirement(name = "AppTokenAuth")
+    @Operation(summary = "📋 Listar clientes", description = "🔐 **Requer Autenticação Tripla** - JWT + API Key + Application Token.")
+    @SecurityRequirement(name = "bearerAuth")
+    @SecurityRequirement(name = "apiKey")
+    @SecurityRequirement(name = "applicationToken")
     public Page<ClienteDTO> listarTodos(
             @PageableDefault(size = 20, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable) {
         return clienteService.listarTodos(pageable);
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "🔍 Buscar cliente por ID", description = "🔐 **Requer Autenticação Tripla** - JWT + API Key + Application Token.")
+    @SecurityRequirement(name = "bearerAuth")
+    @SecurityRequirement(name = "apiKey")
+    @SecurityRequirement(name = "applicationToken")
     public ResponseEntity<ClienteDTO> buscarPorId(@PathVariable Long id) {
         Optional<ClienteDTO> cliente = clienteService.buscarPorId(id);
         return cliente.map(ResponseEntity::ok)
@@ -69,6 +74,10 @@ public class ClienteController {
     }
 
     @PostMapping
+    @Operation(summary = "➕ Criar cliente", description = "🔐 **Requer Autenticação Tripla** - JWT + API Key + Application Token.")
+    @SecurityRequirement(name = "bearerAuth")
+    @SecurityRequirement(name = "apiKey")
+    @SecurityRequirement(name = "applicationToken")
     public ResponseEntity<Cliente> criar(@Valid @RequestBody Cliente cliente) {
         try {
             Cliente clienteSalvo = clienteService.criar(cliente);
@@ -79,6 +88,10 @@ public class ClienteController {
     }
 
     @PutMapping("/{id}")
+    @Operation(summary = "✏️ Atualizar cliente", description = "🔐 **Requer Autenticação Tripla** - JWT + API Key + Application Token.")
+    @SecurityRequirement(name = "bearerAuth")
+    @SecurityRequirement(name = "apiKey")
+    @SecurityRequirement(name = "applicationToken")
     public ResponseEntity<Cliente> atualizar(@PathVariable Long id, @Valid @RequestBody Cliente clienteAtualizado) {
         try {
             Cliente cliente = clienteService.atualizar(id, clienteAtualizado);
@@ -89,6 +102,10 @@ public class ClienteController {
     }
 
     @DeleteMapping("/{id}")
+    @Operation(summary = "🗑️ Deletar cliente", description = "🔐 **Requer Autenticação Tripla** - JWT + API Key + Application Token.")
+    @SecurityRequirement(name = "bearerAuth")
+    @SecurityRequirement(name = "apiKey")
+    @SecurityRequirement(name = "applicationToken")
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
         try {
             clienteService.deletar(id);
