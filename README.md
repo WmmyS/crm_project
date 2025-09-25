@@ -26,61 +26,88 @@ Sistema de CRM (Customer Relationship Management) desenvolvido em Java com Sprin
 - Relatórios e estatísticas
 - Documentação automática com Swagger
 
-### 🔐 Sistema de Autenticação Tripla
+## 🔐 Sistema de Autenticação Dupla
 
-Este CRM implementa um **sistema de autenticação tripla obrigatória** para máxima segurança:
+Este CRM implementa um **sistema de autenticação dupla obrigatória** para máxima segurança:
 
-#### **🔑 Três Camadas de Segurança:**
-1. **JWT Token** - Identifica qual **usuário** está usando a aplicação
-2. **API Key** - Identifica qual **aplicação frontend** está fazendo a requisição  
-3. **Rotating Token** - Prova que a aplicação é **legítima** (renova a cada 15min)
+### **🔑 Duas Camadas de Segurança:**
+1. **JWT Token** - Identifica e autentica o **usuário** que está usando a aplicação
+2. **Application Token** - Identifica e autentica a **aplicação frontend** (renova a cada 15min)
 
-#### **📱 Para Aplicações Frontend:**
+### **📱 Para Aplicações Frontend:**
 ```bash
 # Todas as requisições para endpoints protegidos DEVEM incluir:
-Authorization: Bearer <jwt-token>       # Usuário autenticado
-X-API-Key: <sua-api-key>               # Aplicação autorizada
-X-Rotating-Token: <rotating-token>     # Prova de legitimidade
+Authorization: Bearer <jwt-token>        # Usuário autenticado
+X-App-Token: <application-token>         # Aplicação autorizada
 ```
 
-#### **🔄 Fluxo de Autenticação:**
-1. **Login do usuário** → Recebe JWT (24h)
-2. **Aplicação gera rotating token** usando JWT + API Key (15min)
-3. **Aplicação usa os 3 tokens** em todas as chamadas da API
-4. **Sistema valida todos os 3** antes de permitir acesso
-5. **Renovação automática** do rotating token a cada 10-12min
+### **🔄 Fluxo de Autenticação Completo:**
 
-#### **🛡️ Vantagens da Segurança Tripla:**
+#### **1. Login da Aplicação (Frontend)**
+```bash
+POST /api/auth/app-login
+Content-Type: application/json
+
+{
+  "username": "appuser",
+  "password": "appsecret"
+}
+```
+
+**Resposta:**
+```json
+{
+  "token": "app_eyJhbGciOiJIUzI1NiJ9...",
+  "type": "Bearer",
+  "issuedAt": "2025-01-15T10:30:00",
+  "expiresAt": "2025-01-15T10:45:00",
+  "expiresInMinutes": 15,
+  "appName": "appuser"
+}
+```
+
+#### **2. Login do Usuário**
+```bash
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "login": "wesley",           # Pode ser username ou email
+  "password": "senha123"
+}
+```
+
+**Resposta:**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiJ9...",
+  "type": "Bearer",
+  "username": "wesley",
+  "email": "wesley@email.com",
+  "nome": "Wesley",
+  "role": "USER",
+  "expiresAt": "2025-01-16T10:30:00"
+}
+```
+
+#### **3. Usando Endpoints Protegidos**
+```bash
+GET /api/clientes
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...    # JWT do usuário
+X-App-Token: app_eyJhbGciOiJIUzI1NiJ9...         # Token da aplicação
+```
+
+### **🛡️ Vantagens da Segurança Dupla:**
 - **Controle de usuário**: JWT identifica quem está usando
-- **Controle de aplicação**: API Key fixa identifica qual app frontend
-- **Prova de legitimidade**: Rotating Token com expiração curta (anti-replay)
-- **Zero acesso sem os 3**: Impossível acessar com tokens incompletos
+- **Controle de aplicação**: Application Token identifica qual app frontend
+- **Renovação automática**: Application Token expira em 15min (anti-replay)
+- **Zero acesso sem ambos**: Impossível acessar com apenas 1 token
 
-#### **📋 Recursos Implementados:**
-- **Cadastro público** de usuários
-- **Login com JWT** (campo: `login`, não `username`)
-- **Geração de API Keys** via JWT autenticado
-- **Rotating Tokens** com renovação automática
-- **Cleanup automático** de tokens expirados
-- **Logs detalhados** para debug e auditoria
-
-## ⬆️ Upgrade para Java 21
-
-Este projeto foi **atualizado para Java 21 LTS** (setembro 2024), a versão mais recente e estável do Java.
-
-### ✅ O que foi atualizado:
-- **Java Runtime**: 17 → 21 (LTS)
-- **Spring Boot**: 3.2.0 → 3.3.6 (compatibilidade total com Java 21)
-- **Dockerfile**: Atualizado para `eclipse-temurin:21`
-- **Maven**: Configuração de compilação para Java 21
-- **Dependências**: Todas compatíveis com Java 21
-
-### 🚀 Benefícios do Java 21:
-- **Performance melhorada** em relação ao Java 17
-- **Novos recursos de linguagem** (Pattern Matching, Virtual Threads, etc.)
-- **Suporte LTS** até 2031
-- **Melhor garbage collection**
-- **Compatibilidade completa** com Spring Boot 3.3.x
+### **⚠️ Importante para o Frontend:**
+1. **Sempre faça login da aplicação primeiro** para obter o Application Token
+2. **Renove o Application Token a cada 10-12 minutos** para evitar expiração
+3. **Inclua ambos os tokens em TODAS as requisições** para endpoints protegidos
+4. **Trate erros 401** renovando os tokens conforme necessário
 
 ## 🛠️ Como Executar
 
@@ -89,7 +116,7 @@ Este projeto foi **atualizado para Java 21 LTS** (setembro 2024), a versão mais
 - **Java 21+** (opcional - apenas para desenvolvimento local)
 - **Maven 3.6+** (opcional - apenas para desenvolvimento local)
 
-### Executando com Docker (Recomendado - Não precisa instalar Maven)
+### Executando com Docker (Recomendado)
 
 1. **Clone o repositório e navegue até a pasta:**
 ```bash
@@ -101,31 +128,16 @@ cd www_crm
 ./start.sh
 ```
 
-Este script irá:
-- ✅ Compilar a aplicação usando Maven **dentro do container**
-- ✅ Iniciar PostgreSQL automaticamente
-- ✅ Subir a aplicação completa
-- ✅ **Não requer Maven instalado na máquina**
-
 3. **Acesse a aplicação:**
 - API: http://localhost:8080
 - Swagger UI: http://localhost:8080/swagger-ui.html
 - Banco PostgreSQL: localhost:5432
 
-### Executando Localmente (Desenvolvimento - Requer Maven local)
+### Executando Localmente (Desenvolvimento)
 
-Se você preferir desenvolvimento local com hot-reload:
-
-1. **Execute o script de desenvolvimento:**
 ```bash
 ./start-dev.sh
 ```
-
-Este modo:
-- 🐳 Inicia apenas PostgreSQL no Docker
-- ☕ Executa a aplicação Java localmente
-- 🔄 Permite hot-reload durante desenvolvimento
-- 📋 **Requer Maven instalado**: `sudo apt install maven`
 
 ## 📚 Documentação da API
 
@@ -133,337 +145,189 @@ A documentação completa da API está disponível via Swagger UI:
 - **URL**: http://localhost:8080/swagger-ui.html
 - **JSON**: http://localhost:8080/v3/api-docs
 
+### **🔐 Como Usar o Swagger UI:**
+
+1. **Acesse**: http://localhost:8080/swagger-ui.html
+2. **Faça login da aplicação**: Use o endpoint `/api/auth/app-login`
+3. **Faça login do usuário**: Use o endpoint `/api/auth/login`
+4. **Clique em "Authorize"** (botão do cadeado no topo direito)
+5. **Configure os tokens:**
+   - **bearerAuth**: Cole seu JWT token
+   - **appToken**: Cole seu Application Token
+6. **Teste os endpoints protegidos**
+
 ### Principais Endpoints
 
-#### Clientes
+#### **🔑 Autenticação**
+- `POST /api/auth/app-login` - Login da aplicação (público)
+- `POST /api/auth/register` - Cadastrar usuário (público)
+- `POST /api/auth/login` - Login do usuário (público)
+- `POST /api/auth/refresh` - Renovar JWT (requer apenas JWT)
+- `POST /api/auth/logout` - Logout (requer apenas JWT)
+- `GET /api/auth/me` - Dados do usuário (requer ambos os tokens)
+
+#### **👥 Clientes** (Requer ambos os tokens)
 - `GET /api/clientes` - Listar clientes (paginado)
 - `POST /api/clientes` - Criar cliente
 - `GET /api/clientes/{id}` - Buscar cliente por ID
 - `PUT /api/clientes/{id}` - Atualizar cliente
 - `DELETE /api/clientes/{id}` - Deletar cliente
-- `GET /api/clientes/buscar?termo={termo}` - Buscar clientes
 
-#### Empresas
+#### **🏢 Empresas** (Requer ambos os tokens)
 - `GET /api/empresas` - Listar empresas
 - `POST /api/empresas` - Criar empresa
 - `GET /api/empresas/{id}` - Buscar empresa por ID
 
-#### Contatos
+#### **📞 Contatos** (Requer ambos os tokens)
 - `GET /api/contatos` - Listar contatos
 - `POST /api/contatos` - Registrar contato
 - `GET /api/contatos/cliente/{clienteId}` - Contatos de um cliente
 
-#### Oportunidades
+#### **💼 Oportunidades** (Requer ambos os tokens)
 - `GET /api/oportunidades` - Listar oportunidades
 - `POST /api/oportunidades` - Criar oportunidade
 - `GET /api/oportunidades/status/{status}` - Por status
 
-## 🧪 Como Testar o Sistema de Autenticação Tripla
+## 🧪 Teste Completo da Autenticação
 
-### � Teste Completo via cURL:
+### **Via cURL:**
 
-#### **Passo 1: Registrar usuário**
 ```bash
-curl -s -X POST http://localhost:8080/api/auth/register \
+# 1. Login da aplicação
+curl -X POST http://localhost:8080/api/auth/app-login \
   -H "Content-Type: application/json" \
-  -d '{"username": "testuser", "password": "test123", "email": "test@email.com", "nome": "Teste User"}'
-```
+  -d '{"username": "appuser", "password": "appsecret"}'
 
-#### **Passo 2: Fazer login (obter JWT)**
-```bash
-curl -s -X POST http://localhost:8080/api/auth/login \
+# 2. Cadastrar usuário (opcional)
+curl -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username": "testuser", "password": "test123", "email": "test@email.com", "nome": "Test User"}'
+
+# 3. Login do usuário
+curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"login": "testuser", "password": "test123"}'
-```
-*Copie o token JWT retornado*
 
-#### **Passo 3: Criar API Key**
-```bash
-curl -s -X POST http://localhost:8080/api/auth/api-key \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer SEU_JWT_TOKEN" \
-  -d '{"name": "Minha App", "description": "Chave para teste"}'
-```
-*Copie a API Key retornada*
-
-#### **Passo 4: Gerar Rotating Token**
-```bash
-curl -s -X POST http://localhost:8080/api/auth/rotating-token/generate \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer SEU_JWT_TOKEN" \
-  -d '{"apiKey": "SUA_API_KEY"}'
-```
-*Copie o rotating token retornado*
-
-#### **Passo 5: Usar endpoint protegido (com os 3 tokens)**
-```bash
+# 4. Usar endpoint protegido (substitua os tokens)
 curl -X GET http://localhost:8080/api/clientes \
   -H "Authorization: Bearer SEU_JWT_TOKEN" \
-  -H "X-API-Key: SUA_API_KEY" \
-  -H "X-Rotating-Token: SEU_ROTATING_TOKEN"
+  -H "X-App-Token: SEU_APPLICATION_TOKEN"
 ```
 
-### 🌐 Teste via Swagger UI:
-1. Acesse: `http://localhost:8080/swagger-ui/index.html`
-2. Siga os passos descritos na documentação da API
-3. Use os botões "Authorize" para inserir seus tokens
+### **Via JavaScript (Frontend):**
 
-## �🔐 Sistema de Autenticação e Segurança
+```javascript
+// 1. Login da aplicação
+const appLogin = async () => {
+  const response = await fetch('/api/auth/app-login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      username: 'appuser',
+      password: 'appsecret'
+    })
+  });
+  const data = await response.json();
+  localStorage.setItem('appToken', data.token);
+  return data.token;
+};
 
-### Características do Sistema
-- **Autenticação Tripla Obrigatória**: JWT + API Key + Rotating Token
-- **JWT Tokens**: Seguros com expiração de 24 horas
-- **API Keys**: Identificação fixa de aplicações frontend
-- **Rotating Tokens**: Renovação automática a cada 15 minutos
-- **Cadastro público**: Usuários podem se registrar livremente
-- **Controle de acesso**: Sistema baseado em roles (ADMIN, USER, API)
-- **Criptografia**: Senhas protegidas com BCrypt
-- **Cleanup automático**: Tokens expirados removidos automaticamente
+// 2. Login do usuário
+const userLogin = async (username, password) => {
+  const response = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      login: username,
+      password: password
+    })
+  });
+  const data = await response.json();
+  localStorage.setItem('userToken', data.token);
+  return data.token;
+};
 
-### Endpoints de Autenticação
+// 3. Fazer requisições autenticadas
+const fetchClientes = async () => {
+  const userToken = localStorage.getItem('userToken');
+  const appToken = localStorage.getItem('appToken');
+  
+  const response = await fetch('/api/clientes', {
+    headers: {
+      'Authorization': `Bearer ${userToken}`,
+      'X-App-Token': appToken
+    }
+  });
+  
+  if (response.status === 401) {
+    // Renovar tokens se necessário
+    await appLogin();
+    // Retry da requisição...
+  }
+  
+  return response.json();
+};
 
-#### 🔑 Cadastro de Usuário
-```bash
-POST /api/auth/register
-Content-Type: application/json
-
-{
-  "username": "seuusername",
-  "email": "seu@email.com",
-  "password": "suasenha123",
-  "nome": "Seu Nome Completo"
-}
+// 4. Renovar Application Token automaticamente
+setInterval(async () => {
+  await appLogin();
+}, 12 * 60 * 1000); // A cada 12 minutos
 ```
 
-**Resposta de Sucesso:**
-```json
-{
-  "id": 3,
-  "username": "seuusername",
-  "email": "seu@email.com",
-  "nome": "Seu Nome Completo",
-  "role": "USER",
-  "message": "Usuário cadastrado com sucesso"
-}
+## 🔐 Configurações de Segurança
+
+### **Credenciais da Aplicação (application.properties):**
+```properties
+# Configuração de Autenticação da Aplicação
+app.auth.username=appuser
+app.auth.password=appsecret
+
+# Configuração JWT
+jwt.secret=mySecretKey123456789012345678901234567890
+jwt.expiration=86400000  # 24 horas
 ```
 
-#### 🔓 Login de Usuário
-```bash
-POST /api/auth/login
-Content-Type: application/json
-
-{
-  "login": "seuusername",    # Pode ser username ou email
-  "password": "suasenha123"
-}
-```
-
-**Resposta de Sucesso:**
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiJ9...",
-  "type": "Bearer",
-  "username": "seuusername",
-  "email": "seu@email.com",
-  "nome": "Seu Nome Completo",
-  "role": "USER",
-  "expiresAt": "2025-09-25T18:21:03.123456"
-}
-```
-
-#### 🔄 Renovar Token
-```bash
-POST /api/auth/refresh
-Authorization: Bearer SEU_TOKEN_ATUAL
-```
-
-#### 🚪 Logout
-```bash
-POST /api/auth/logout
-Authorization: Bearer SEU_TOKEN
-```
-
-#### 👤 Informações do Usuário
-```bash
-GET /api/auth/me
-Authorization: Bearer SEU_TOKEN
-```
-
-### Gerenciamento de API Keys
-
-#### 🔑 Criar API Key
-```bash
-POST /api/auth/api-keys
-Authorization: Bearer SEU_TOKEN
-Content-Type: application/json
-
-{
-  "name": "Minha App Frontend"
-}
-```
-
-**Resposta:**
-```json
-{
-  "id": 1,
-  "key": "crm_B4q-bLUouXQ6BHMU_ucuah8tE-yhmhYVWGcFwrN9nFw",
-  "name": "Minha App Frontend",
-  "isActive": true,
-  "createdAt": "2025-09-24T15:30:00",
-  "lastUsed": null
-}
-```
-
-#### 📋 Listar API Keys
-```bash
-GET /api/auth/api-keys
-Authorization: Bearer SEU_TOKEN
-```
-
-#### ❌ Revogar API Key
-```bash
-DELETE /api/auth/api-keys/{id}
-Authorization: Bearer SEU_TOKEN
-```
-
-### Como Usar as API Keys
-
-Para usar uma API Key, inclua ela no header `X-API-Key`:
-
-```bash
-GET /api/clientes
-X-API-Key: crm_B4q-bLUouXQ6BHMU_ucuah8tE-yhmhYVWGcFwrN9nFw
-```
-
-### Roles e Permissões
-
+### **Roles e Permissões:**
 - **ADMIN**: Acesso completo ao sistema
 - **USER**: Acesso aos recursos padrão do CRM
-- **API**: Role automática para autenticação via API Key
+- **API**: Role automática para autenticação via Application Token
 
-### Validações de Segurança
-
+### **Validações de Segurança:**
 - ✅ Username único (mínimo 3 caracteres)
 - ✅ Email único e válido
 - ✅ Senha mínima de 6 caracteres
-- ✅ Tokens JWT com expiração
-- ✅ API Keys com prefixo `crm_` para identificação
+- ✅ JWT com expiração de 24 horas
+- ✅ Application Token com expiração de 15 minutos
 - ✅ Blacklist de tokens para logout seguro
 - ✅ Criptografia BCrypt para senhas
 
 ## 🗄️ Configuração do Banco de Dados
 
-### Como Funciona a Conexão
+### **Dados de Conexão:**
+- **Host**: localhost:5432 (local) / postgres:5432 (Docker)
+- **Database**: crm_db
+- **User**: crm_user
+- **Password**: crm_password
 
-O sistema usa **perfis do Spring Boot** para diferentes ambientes:
+### **Estrutura das Tabelas:**
+- `users` - Usuários do sistema
+- `empresas` - Informações das empresas
+- `clientes` - Dados dos clientes
+- `contatos` - Histórico de interações
+- `oportunidades` - Oportunidades de venda
 
-#### 🏠 Desenvolvimento Local (`application.properties`)
-```properties
-# Conecta diretamente no PostgreSQL local
-spring.datasource.url=jdbc:postgresql://localhost:5432/crm_db
-spring.datasource.username=crm_user
-spring.datasource.password=crm_password
-spring.datasource.driver-class-name=org.postgresql.Driver
-```
-
-#### 🐳 Docker (`application-docker.properties`)
-```properties
-# Usa variáveis de ambiente do Docker Compose
-spring.datasource.url=jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/${DB_NAME:crm_db}
-spring.datasource.username=${DB_USER:crm_user}
-spring.datasource.password=${DB_PASSWORD:crm_password}
-```
-
-### Dados de Conexão Atuais
-
-#### Para Docker Compose:
-- **Host**: `postgres` (nome do container)
-- **Porta**: `5432`
-- **Banco**: `crm_db`
-- **Usuário**: `crm_user`
-- **Senha**: `crm_password`
-
-#### Para Desenvolvimento Local:
-- **Host**: `localhost`
-- **Porta**: `5432`
-- **Banco**: `crm_db`
-- **Usuário**: `crm_user`
-- **Senha**: `crm_password`
-
-### Configurações do JPA/Hibernate
-
-```properties
-# Atualização automática do schema
-spring.jpa.hibernate.ddl-auto=update
-
-# Exibir SQLs no console (apenas desenvolvimento)
-spring.jpa.show-sql=true
-
-# Formatação das queries SQL
-spring.jpa.properties.hibernate.format_sql=true
-
-# Dialeto específico do PostgreSQL
-spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
-```
-
-### Como Alterar as Configurações
-
-1. **Para Docker**: Modifique as variáveis no `docker-compose.yml`
-2. **Para Local**: Altere os valores em `application.properties`
-3. **Variáveis de Ambiente**: Use `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`
-
-### Comandos Úteis do Banco
-
+### **Comandos Úteis:**
 ```bash
 # Conectar no banco via Docker
 docker exec -it crm_postgres psql -U crm_user -d crm_db
 
 # Ver usuários cadastrados
 docker exec crm_postgres psql -U crm_user -d crm_db -c "SELECT * FROM users;"
-
-# Ver estrutura de uma tabela
-docker exec crm_postgres psql -U crm_user -d crm_db -c "\d users"
-
-# Backup do banco
-docker exec crm_postgres pg_dump -U crm_user crm_db > backup.sql
-```
-
-## 🗄️ Estrutura do Banco
-
-### Configuração
-- **Host**: localhost:5432
-- **Database**: crm_db
-- **User**: crm_user
-- **Password**: crm_password
-
-### Estrutura das Tabelas
-- `empresas` - Informações das empresas
-- `clientes` - Dados dos clientes
-- `contatos` - Histórico de interações
-- `oportunidades` - Oportunidades de venda
-
-### Dados Iniciais
-O banco é populado automaticamente com dados de exemplo para desenvolvimento.
-
-## 🔧 Configuração de Ambiente
-
-### Perfis Disponíveis
-- `dev` - Desenvolvimento local
-- `docker` - Execução em container
-- `test` - Testes automatizados
-
-### Variáveis de Ambiente (Docker)
-```bash
-DB_HOST=postgres
-DB_PORT=5432
-DB_NAME=crm_db
-DB_USER=crm_user
-DB_PASSWORD=crm_password
 ```
 
 ## 📈 Monitoramento
 
-### Spring Boot Actuator
+### **Spring Boot Actuator:**
 - Health Check: http://localhost:8080/actuator/health
 - Métricas: http://localhost:8080/actuator/metrics
 - Info: http://localhost:8080/actuator/info
@@ -477,15 +341,6 @@ mvn test
 # Executar testes específicos
 mvn test -Dtest=ClienteControllerTest
 ```
-
-## 📊 Relatórios Disponíveis
-
-- Clientes por status
-- Clientes por estado
-- Contatos por tipo
-- Oportunidades por status
-- Valor total de vendas
-- Probabilidade média de fechamento
 
 ## 🤝 Contribuição
 
