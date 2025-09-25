@@ -28,6 +28,8 @@ public class ApplicationTokenAuthenticationFilter extends OncePerRequestFilter {
       "/api/auth/app-login",
       "/api/auth/login",
       "/api/auth/register",
+      "/api/clientes/imagem",
+      "/uploads",
       "/debug",
       "/actuator",
       "/swagger-ui",

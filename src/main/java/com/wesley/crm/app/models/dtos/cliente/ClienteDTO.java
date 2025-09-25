@@ -19,6 +19,7 @@ public class ClienteDTO {
     private LocalDateTime dataAtualizacao;
     private Long empresaId;
     private String empresaNome;
+    private String imagemUrl;
 
     // Constructors
     public ClienteDTO() {}
@@ -26,7 +27,7 @@ public class ClienteDTO {
     public ClienteDTO(Long id, String nome, String email, String telefone, String cpf, 
                      LocalDate dataNascimento, String endereco, String cidade, String estado, 
                      String cep, String status, LocalDateTime dataCriacao, LocalDateTime dataAtualizacao,
-                     Long empresaId, String empresaNome) {
+                     Long empresaId, String empresaNome, String imagemUrl) {
         this.id = id;
         this.nome = nome;
         this.email = email;
@@ -42,6 +43,7 @@ public class ClienteDTO {
         this.dataAtualizacao = dataAtualizacao;
         this.empresaId = empresaId;
         this.empresaNome = empresaNome;
+        this.imagemUrl = imagemUrl;
     }
 
     // Getters and Setters
@@ -89,4 +91,7 @@ public class ClienteDTO {
 
     public String getEmpresaNome() { return empresaNome; }
     public void setEmpresaNome(String empresaNome) { this.empresaNome = empresaNome; }
+
+    public String getImagemUrl() { return imagemUrl; }
+    public void setImagemUrl(String imagemUrl) { this.imagemUrl = imagemUrl; }
 }

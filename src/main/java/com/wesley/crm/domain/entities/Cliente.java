@@ -59,6 +59,9 @@ public class Cliente {
     @Column(length = 20)
     private StatusCliente status = StatusCliente.ATIVO;
 
+    @Column(name = "imagem_url")
+    private String imagemUrl;
+
     @Column(name = "data_criacao", updatable = false)
     private LocalDateTime dataCriacao;
 
@@ -230,5 +233,13 @@ public class Cliente {
 
     public void setOportunidades(List<Oportunidade> oportunidades) {
         this.oportunidades = oportunidades;
+    }
+
+    public String getImagemUrl() {
+        return imagemUrl;
+    }
+
+    public void setImagemUrl(String imagemUrl) {
+        this.imagemUrl = imagemUrl;
     }
 }

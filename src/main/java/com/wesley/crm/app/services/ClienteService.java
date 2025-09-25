@@ -2,7 +2,11 @@ package com.wesley.crm.app.services;
 
 import com.wesley.crm.domain.entities.Cliente;
 import com.wesley.crm.app.models.dtos.cliente.ClienteDTO;
+import com.wesley.crm.app.models.dtos.cliente.ClienteRequestDTO;
+import com.wesley.crm.domain.entities.Empresa;
+import com.wesley.crm.infra.database.EmpresaRepository;
 import com.wesley.crm.infra.database.ClienteRepository;
+import com.wesley.crm.app.services.FileUploadService;
 import com.wesley.crm.exceptions.CrmException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -10,6 +14,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +26,12 @@ public class ClienteService {
 
     @Autowired
     private ClienteRepository clienteRepository;
+
+    @Autowired
+    private EmpresaRepository empresaRepository;
+    
+    @Autowired
+    private FileUploadService fileUploadService;
 
     // Métodos de consulta
     public Page<ClienteDTO> listarTodos(Pageable pageable) {
@@ -60,31 +71,40 @@ public class ClienteService {
     }
 
     // Métodos de modificação
-    public Cliente criar(Cliente cliente) {
-        validarCliente(cliente);
-        validarEmailUnico(cliente.getEmail(), null);
-        return clienteRepository.save(cliente);
+    public ClienteDTO criar(ClienteRequestDTO clienteRequest) {
+        validarClienteRequest(clienteRequest);
+        validarEmailUnico(clienteRequest.getEmail(), null);
+
+        Cliente cliente = convertFromDTO(clienteRequest);
+        Cliente clienteSalvo = clienteRepository.save(cliente);
+        return convertToDTO(clienteSalvo);
     }
 
-    public Cliente atualizar(Long id, Cliente clienteAtualizado) {
+    public ClienteDTO atualizar(Long id, ClienteRequestDTO clienteRequest) {
         return clienteRepository.findById(id)
                 .map(cliente -> {
-                    validarCliente(clienteAtualizado);
-                    validarEmailUnico(clienteAtualizado.getEmail(), id);
+                    validarClienteRequest(clienteRequest);
+                    validarEmailUnico(clienteRequest.getEmail(), id);
 
-                    cliente.setNome(clienteAtualizado.getNome());
-                    cliente.setEmail(clienteAtualizado.getEmail());
-                    cliente.setTelefone(clienteAtualizado.getTelefone());
-                    cliente.setCpf(clienteAtualizado.getCpf());
-                    cliente.setDataNascimento(clienteAtualizado.getDataNascimento());
-                    cliente.setEndereco(clienteAtualizado.getEndereco());
-                    cliente.setCidade(clienteAtualizado.getCidade());
-                    cliente.setEstado(clienteAtualizado.getEstado());
-                    cliente.setCep(clienteAtualizado.getCep());
-                    cliente.setStatus(clienteAtualizado.getStatus());
-                    cliente.setEmpresa(clienteAtualizado.getEmpresa());
+                    cliente.setNome(clienteRequest.getNome());
+                    cliente.setEmail(clienteRequest.getEmail());
+                    cliente.setTelefone(clienteRequest.getTelefone());
+                    cliente.setEndereco(clienteRequest.getEndereco());
+                    cliente.setCidade(clienteRequest.getCidade());
+                    cliente.setEstado(clienteRequest.getEstado());
+                    cliente.setCep(clienteRequest.getCep());
 
-                    return clienteRepository.save(cliente);
+                    if (clienteRequest.getEmpresaId() != null) {
+                        Empresa empresa = empresaRepository.findById(clienteRequest.getEmpresaId())
+                                .orElseThrow(() -> new CrmException(
+                                        "Empresa não encontrada com ID: " + clienteRequest.getEmpresaId()));
+                        cliente.setEmpresa(empresa);
+                    } else {
+                        cliente.setEmpresa(null);
+                    }
+
+                    Cliente clienteSalvo = clienteRepository.save(cliente);
+                    return convertToDTO(clienteSalvo);
                 })
                 .orElseThrow(() -> new CrmException("Cliente não encontrado com ID: " + id));
     }
@@ -109,12 +129,60 @@ public class ClienteService {
         return clienteRepository.countClientesPorEstado();
     }
 
+    // Métodos de imagem
+    public ClienteDTO uploadImagem(Long id, MultipartFile file) {
+        Cliente cliente = clienteRepository.findById(id)
+                .orElseThrow(() -> new CrmException("Cliente não encontrado com ID: " + id));
+
+        // Remover imagem anterior se existir
+        if (cliente.getImagemUrl() != null) {
+            fileUploadService.deleteImage(cliente.getImagemUrl());
+        }
+
+        // Upload da nova imagem
+        String imageUrl = fileUploadService.uploadImage(file);
+        cliente.setImagemUrl(imageUrl);
+
+        Cliente clienteSalvo = clienteRepository.save(cliente);
+        return convertToDTO(clienteSalvo);
+    }
+
+    public ClienteDTO removerImagem(Long id) {
+        Cliente cliente = clienteRepository.findById(id)
+                .orElseThrow(() -> new CrmException("Cliente não encontrado com ID: " + id));
+
+        if (cliente.getImagemUrl() != null) {
+            fileUploadService.deleteImage(cliente.getImagemUrl());
+            cliente.setImagemUrl(null);
+            Cliente clienteSalvo = clienteRepository.save(cliente);
+            return convertToDTO(clienteSalvo);
+        }
+
+        return convertToDTO(cliente);
+    }
+
+    public ClienteDTO criarComImagem(ClienteRequestDTO clienteRequest, MultipartFile imagem) {
+        validarClienteRequest(clienteRequest);
+        validarEmailUnico(clienteRequest.getEmail(), null);
+        
+        Cliente cliente = convertFromDTO(clienteRequest);
+        
+        // Se tem imagem, fazer upload
+        if (imagem != null && !imagem.isEmpty()) {
+            String imageUrl = fileUploadService.uploadImage(imagem);
+            cliente.setImagemUrl(imageUrl);
+        }
+        
+        Cliente clienteSalvo = clienteRepository.save(cliente);
+        return convertToDTO(clienteSalvo);
+    }
+
     // Validações de regras de negócio
-    private void validarCliente(Cliente cliente) {
-        if (cliente.getNome() == null || cliente.getNome().trim().isEmpty()) {
+    private void validarClienteRequest(ClienteRequestDTO clienteRequest) {
+        if (clienteRequest.getNome() == null || clienteRequest.getNome().trim().isEmpty()) {
             throw new CrmException("Nome é obrigatório");
         }
-        if (cliente.getEmail() == null || cliente.getEmail().trim().isEmpty()) {
+        if (clienteRequest.getEmail() == null || clienteRequest.getEmail().trim().isEmpty()) {
             throw new CrmException("Email é obrigatório");
         }
     }
@@ -126,7 +194,7 @@ public class ClienteService {
         }
     }
 
-    // Método para converter Cliente para ClienteDTO
+    // Métodos de conversão
     private ClienteDTO convertToDTO(Cliente cliente) {
         return new ClienteDTO(
                 cliente.getId(),
@@ -143,6 +211,28 @@ public class ClienteService {
                 cliente.getDataCriacao(),
                 cliente.getDataAtualizacao(),
                 cliente.getEmpresa() != null ? cliente.getEmpresa().getId() : null,
-                cliente.getEmpresa() != null ? cliente.getEmpresa().getNome() : null);
+                cliente.getEmpresa() != null ? cliente.getEmpresa().getNome() : null,
+                cliente.getImagemUrl());
+    }
+
+    private Cliente convertFromDTO(ClienteRequestDTO clienteRequest) {
+        Cliente cliente = new Cliente();
+        cliente.setNome(clienteRequest.getNome());
+        cliente.setEmail(clienteRequest.getEmail());
+        cliente.setTelefone(clienteRequest.getTelefone());
+        cliente.setEndereco(clienteRequest.getEndereco());
+        cliente.setCidade(clienteRequest.getCidade());
+        cliente.setEstado(clienteRequest.getEstado());
+        cliente.setCep(clienteRequest.getCep());
+        cliente.setStatus(Cliente.StatusCliente.ATIVO); // Status padrão
+
+        if (clienteRequest.getEmpresaId() != null) {
+            Empresa empresa = empresaRepository.findById(clienteRequest.getEmpresaId())
+                    .orElseThrow(
+                            () -> new CrmException("Empresa não encontrada com ID: " + clienteRequest.getEmpresaId()));
+            cliente.setEmpresa(empresa);
+        }
+
+        return cliente;
     }
 }

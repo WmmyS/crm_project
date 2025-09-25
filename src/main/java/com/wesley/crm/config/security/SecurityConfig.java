@@ -52,6 +52,8 @@ public class SecurityConfig {
             .requestMatchers("/swagger-ui/**").permitAll()
             .requestMatchers("/swagger-ui.html").permitAll()
             .requestMatchers("/v3/api-docs/**").permitAll()
+            .requestMatchers("/api/clientes/imagem/**").permitAll()
+            .requestMatchers("/uploads/**").permitAll()
             .requestMatchers("/").permitAll()
 
             // Endpoints que requerem autenticação (Token da Aplicação + JWT)

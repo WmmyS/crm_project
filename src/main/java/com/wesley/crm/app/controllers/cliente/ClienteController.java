@@ -2,9 +2,16 @@ package com.wesley.crm.app.controllers.cliente;
 
 import com.wesley.crm.domain.entities.Cliente;
 import com.wesley.crm.app.models.dtos.cliente.ClienteDTO;
+import com.wesley.crm.app.models.dtos.cliente.ClienteRequestDTO;
 import com.wesley.crm.app.services.ClienteService;
+import com.wesley.crm.app.services.FileUploadService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -14,6 +21,10 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.core.io.Resource;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 import java.util.Optional;
@@ -26,6 +37,9 @@ public class ClienteController {
 
     @Autowired
     private ClienteService clienteService;
+    
+    @Autowired
+    private FileUploadService fileUploadService;
 
     @GetMapping
     @Operation(summary = "📋 Listar clientes", description = "🔐 **Requer Autenticação Dupla** - JWT + Application Token.")
@@ -68,9 +82,46 @@ public class ClienteController {
 
     @PostMapping
     @Operation(summary = "➕ Criar cliente", description = "🔐 **Requer Autenticação Dupla** - JWT + Application Token.")
-    public ResponseEntity<Cliente> criar(@Valid @RequestBody Cliente cliente) {
+    public ResponseEntity<ClienteDTO> criar(@Valid @RequestBody ClienteRequestDTO clienteRequest) {
         try {
-            Cliente clienteSalvo = clienteService.criar(cliente);
+            ClienteDTO clienteSalvo = clienteService.criar(clienteRequest);
+            return ResponseEntity.status(HttpStatus.CREATED).body(clienteSalvo);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping(value = "/com-imagem", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "➕ Criar cliente com imagem", description = "🔐 **Requer Autenticação Dupla** - Cria cliente e faz upload da imagem em uma única requisição.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "Cliente criado com sucesso",
+            content = @Content(mediaType = "application/json", 
+                examples = @ExampleObject(value = "{\"id\": 1, \"nome\": \"João Silva\", \"email\": \"joao@email.com\", \"imagemUrl\": \"/uploads/clientes/abc123.jpg\"}"))),
+        @ApiResponse(responseCode = "400", description = "Dados inválidos ou arquivo muito grande")
+    })
+    public ResponseEntity<ClienteDTO> criarComImagem(
+            @RequestParam("nome") String nome,
+            @RequestParam("email") String email,
+            @RequestParam(value = "telefone", required = false) String telefone,
+            @RequestParam(value = "endereco", required = false) String endereco,
+            @RequestParam(value = "cidade", required = false) String cidade,
+            @RequestParam(value = "estado", required = false) String estado,
+            @RequestParam(value = "cep", required = false) String cep,
+            @RequestParam(value = "empresaId", required = false) Long empresaId,
+            @RequestParam(value = "imagem", required = false) MultipartFile imagem) {
+        try {
+            // Criar DTO com os dados recebidos
+            ClienteRequestDTO clienteRequest = new ClienteRequestDTO();
+            clienteRequest.setNome(nome);
+            clienteRequest.setEmail(email);
+            clienteRequest.setTelefone(telefone);
+            clienteRequest.setEndereco(endereco);
+            clienteRequest.setCidade(cidade);
+            clienteRequest.setEstado(estado);
+            clienteRequest.setCep(cep);
+            clienteRequest.setEmpresaId(empresaId);
+
+            ClienteDTO clienteSalvo = clienteService.criarComImagem(clienteRequest, imagem);
             return ResponseEntity.status(HttpStatus.CREATED).body(clienteSalvo);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
@@ -79,9 +130,9 @@ public class ClienteController {
 
     @PutMapping("/{id}")
     @Operation(summary = "✏️ Atualizar cliente", description = "🔐 **Requer Autenticação Dupla** - JWT + Application Token.")
-    public ResponseEntity<Cliente> atualizar(@PathVariable Long id, @Valid @RequestBody Cliente clienteAtualizado) {
+    public ResponseEntity<ClienteDTO> atualizar(@PathVariable Long id, @Valid @RequestBody ClienteRequestDTO clienteRequest) {
         try {
-            Cliente cliente = clienteService.atualizar(id, clienteAtualizado);
+            ClienteDTO cliente = clienteService.atualizar(id, clienteRequest);
             return ResponseEntity.ok(cliente);
         } catch (Exception e) {
             return ResponseEntity.notFound().build();
@@ -110,5 +161,52 @@ public class ClienteController {
     public ResponseEntity<List<Object[]>> clientesPorEstado() {
         List<Object[]> resultado = clienteService.clientesPorEstado();
         return ResponseEntity.ok(resultado);
+    }
+
+    @PostMapping(value = "/{id}/imagem", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "🖼️ Upload de imagem", description = "🔐 **Requer Autenticação Dupla** - Faz upload da imagem do cliente (JPG, PNG, GIF - máx 5MB).")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Imagem enviada com sucesso",
+            content = @Content(mediaType = "application/json", 
+                examples = @ExampleObject(value = "{\"id\": 1, \"nome\": \"João Silva\", \"email\": \"joao@email.com\", \"imagemUrl\": \"/uploads/clientes/abc123.jpg\"}"))),
+        @ApiResponse(responseCode = "400", description = "Arquivo inválido ou muito grande"),
+        @ApiResponse(responseCode = "404", description = "Cliente não encontrado")
+    })
+    public ResponseEntity<ClienteDTO> uploadImagem(@PathVariable Long id, @RequestParam("imagem") MultipartFile file) {
+        try {
+            ClienteDTO cliente = clienteService.uploadImagem(id, file);
+            return ResponseEntity.ok(cliente);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @DeleteMapping("/{id}/imagem")
+    @Operation(summary = "🗑️ Remover imagem", description = "🔐 **Requer Autenticação Dupla** - Remove a imagem do cliente.")
+    public ResponseEntity<ClienteDTO> removerImagem(@PathVariable Long id) {
+        try {
+            ClienteDTO cliente = clienteService.removerImagem(id);
+            return ResponseEntity.ok(cliente);
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/imagem/{filename}")
+    @Operation(summary = "🖼️ Visualizar imagem", description = "🆓 **Endpoint PÚBLICO** - Retorna a imagem do cliente. Use o nome do arquivo da URL retornada no upload.", security = {})
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Imagem encontrada",
+            content = @Content(mediaType = "image/jpeg")),
+        @ApiResponse(responseCode = "404", description = "Imagem não encontrada")
+    })
+    public ResponseEntity<Resource> visualizarImagem(@PathVariable String filename) {
+        try {
+            Resource resource = fileUploadService.getImage(filename);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.IMAGE_JPEG)
+                    .body(resource);
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 }
