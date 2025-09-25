@@ -4,7 +4,6 @@ import com.wesley.crm.domain.entities.Cliente;
 import com.wesley.crm.app.models.dtos.cliente.ClienteDTO;
 import com.wesley.crm.app.services.ClienteService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,27 +21,21 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/clientes")
 @CrossOrigin(origins = "*")
-@Tag(name = "👥 Clientes", description = "Endpoints para gerenciamento de clientes - Requer autenticação via JWT Token ou API Key")
+@Tag(name = "👥 Clientes", description = "Endpoints para gerenciamento de clientes - Requer autenticação dupla")
 public class ClienteController {
 
     @Autowired
     private ClienteService clienteService;
 
     @GetMapping
-    @Operation(summary = "📋 Listar clientes", description = "🔐 **Requer Autenticação Tripla** - JWT + API Key + Application Token.")
-    @SecurityRequirement(name = "bearerAuth")
-    @SecurityRequirement(name = "apiKey")
-    @SecurityRequirement(name = "applicationToken")
+    @Operation(summary = "📋 Listar clientes", description = "🔐 **Requer Autenticação Dupla** - JWT + Application Token.")
     public Page<ClienteDTO> listarTodos(
             @PageableDefault(size = 20, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable) {
         return clienteService.listarTodos(pageable);
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "🔍 Buscar cliente por ID", description = "🔐 **Requer Autenticação Tripla** - JWT + API Key + Application Token.")
-    @SecurityRequirement(name = "bearerAuth")
-    @SecurityRequirement(name = "apiKey")
-    @SecurityRequirement(name = "applicationToken")
+    @Operation(summary = "🔍 Buscar cliente por ID", description = "🔐 **Requer Autenticação Dupla** - JWT + Application Token.")
     public ResponseEntity<ClienteDTO> buscarPorId(@PathVariable Long id) {
         Optional<ClienteDTO> cliente = clienteService.buscarPorId(id);
         return cliente.map(ResponseEntity::ok)
@@ -74,10 +67,7 @@ public class ClienteController {
     }
 
     @PostMapping
-    @Operation(summary = "➕ Criar cliente", description = "🔐 **Requer Autenticação Tripla** - JWT + API Key + Application Token.")
-    @SecurityRequirement(name = "bearerAuth")
-    @SecurityRequirement(name = "apiKey")
-    @SecurityRequirement(name = "applicationToken")
+    @Operation(summary = "➕ Criar cliente", description = "🔐 **Requer Autenticação Dupla** - JWT + Application Token.")
     public ResponseEntity<Cliente> criar(@Valid @RequestBody Cliente cliente) {
         try {
             Cliente clienteSalvo = clienteService.criar(cliente);
@@ -88,10 +78,7 @@ public class ClienteController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "✏️ Atualizar cliente", description = "🔐 **Requer Autenticação Tripla** - JWT + API Key + Application Token.")
-    @SecurityRequirement(name = "bearerAuth")
-    @SecurityRequirement(name = "apiKey")
-    @SecurityRequirement(name = "applicationToken")
+    @Operation(summary = "✏️ Atualizar cliente", description = "🔐 **Requer Autenticação Dupla** - JWT + Application Token.")
     public ResponseEntity<Cliente> atualizar(@PathVariable Long id, @Valid @RequestBody Cliente clienteAtualizado) {
         try {
             Cliente cliente = clienteService.atualizar(id, clienteAtualizado);
@@ -102,10 +89,7 @@ public class ClienteController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "🗑️ Deletar cliente", description = "🔐 **Requer Autenticação Tripla** - JWT + API Key + Application Token.")
-    @SecurityRequirement(name = "bearerAuth")
-    @SecurityRequirement(name = "apiKey")
-    @SecurityRequirement(name = "applicationToken")
+    @Operation(summary = "🗑️ Deletar cliente", description = "🔐 **Requer Autenticação Dupla** - JWT + Application Token.")
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
         try {
             clienteService.deletar(id);

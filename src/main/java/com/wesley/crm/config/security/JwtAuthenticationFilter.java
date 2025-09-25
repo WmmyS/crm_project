@@ -35,11 +35,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     try {
       String jwt = getJwtFromRequest(request);
-      logger.info("JWT from request: " + (jwt != null ? "present" : "null"));
+      String path = request.getRequestURI();
+      logger.info("🔍 [JWT-FILTER] Processando: " + path + " - JWT: " + (jwt != null ? "[PRESENTE]" : "[AUSENTE]"));
 
       if (StringUtils.hasText(jwt) && jwtService.validateToken(jwt)) {
         String username = jwtService.getUsernameFromToken(jwt);
-        logger.info("Username from JWT: " + username);
+        logger.info("✅ [JWT-FILTER] JWT válido - Username: " + username);
 
         Optional<User> userOptional = userRepository.findByUsername(username);
         if (userOptional.isPresent()) {
@@ -57,10 +58,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
           SecurityContextHolder.getContext().setAuthentication(authentication);
           logger.info("Authentication set for user: " + username);
         } else {
-          logger.warn("User not found: " + username);
+          logger.error("❌ [JWT-FILTER] Usuário não encontrado: " + username);
         }
       } else {
-        logger.info("JWT validation failed or JWT is empty");
+        logger.warn("❌ [JWT-FILTER] JWT inválido ou ausente para: " + path);
       }
     } catch (Exception ex) {
       logger.error("Could not set user authentication in security context", ex);

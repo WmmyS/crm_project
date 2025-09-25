@@ -42,27 +42,34 @@ public class ApplicationTokenAuthenticationFilter extends OncePerRequestFilter {
     String path = request.getRequestURI();
     String method = request.getMethod();
 
-    logger.debug("🔍 Verificando token da aplicação para: {} {}", method, path);
+    logger.info("🔍 [APP-TOKEN-FILTER] Verificando token da aplicação para: {} {}", method, path);
+    logger.info("🔍 [APP-TOKEN-FILTER] Headers recebidos:");
+    java.util.Collections.list(request.getHeaderNames()).forEach(headerName -> {
+      logger.info("🔍 [APP-TOKEN-FILTER] Header: {} = {}", headerName, request.getHeader(headerName));
+    });
 
     // Verificar se é um endpoint público
     if (isPublicEndpoint(path)) {
-      logger.debug("✅ Endpoint público detectado: {}", path);
+      logger.info("✅ [APP-TOKEN-FILTER] Endpoint público detectado: {}", path);
       filterChain.doFilter(request, response);
       return;
     }
 
     // Verificar se é uma requisição para /api/**
     if (!path.startsWith("/api/")) {
-      logger.debug("✅ Não é endpoint da API: {}", path);
+      logger.info("✅ [APP-TOKEN-FILTER] Não é endpoint da API: {}", path);
       filterChain.doFilter(request, response);
       return;
     }
 
     // Extrair token da aplicação do header X-App-Token
     String appToken = request.getHeader("X-App-Token");
+    
+    logger.info("🔍 [APP-TOKEN-FILTER] X-App-Token recebido: {}", appToken != null ? "[PRESENTE]" : "[AUSENTE]");
 
     if (appToken == null || appToken.trim().isEmpty()) {
-      logger.warn("❌ Token da aplicação não fornecido para: {}", path);
+      logger.error("❌ [APP-TOKEN-FILTER] Token da aplicação não fornecido para: {}", path);
+      logger.error("❌ [APP-TOKEN-FILTER] BLOQUEADO - Faltando X-App-Token header");
       response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
       response.setContentType("application/json");
       response.getWriter().write(
@@ -76,8 +83,10 @@ public class ApplicationTokenAuthenticationFilter extends OncePerRequestFilter {
     }
 
     // Validar token da aplicação
+    logger.info("🔍 [APP-TOKEN-FILTER] Validando token: {}", appToken.substring(0, Math.min(20, appToken.length())) + "...");
     if (!applicationTokenService.validateApplicationToken(appToken)) {
-      logger.warn("❌ Token da aplicação inválido ou expirado para: {}", path);
+      logger.error("❌ [APP-TOKEN-FILTER] Token da aplicação inválido ou expirado para: {}", path);
+      logger.error("❌ [APP-TOKEN-FILTER] BLOQUEADO - Token inválido");
       response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
       response.setContentType("application/json");
       response.getWriter().write(
@@ -85,7 +94,7 @@ public class ApplicationTokenAuthenticationFilter extends OncePerRequestFilter {
       return;
     }
 
-    logger.debug("✅ Token da aplicação válido para: {}", path);
+    logger.info("✅ [APP-TOKEN-FILTER] Token da aplicação válido para: {}", path);
 
     // Se chegou até aqui, o token da aplicação é válido
     // Continuar com os próximos filtros (JWT, etc.)

@@ -116,8 +116,7 @@ public class AuthController {
   }
 
   @PostMapping("/refresh")
-  @Operation(summary = "🔄 Renovar token", description = "🔐 **Requer JWT Token** - Renova token JWT válido.")
-  @SecurityRequirement(name = "bearerAuth")
+  @Operation(summary = "🔄 Renovar token", description = "🔐 **Requer apenas JWT Token** - Renova token JWT válido.", security = {@SecurityRequirement(name = "bearerAuth")})
   @ApiResponses(value = {
       @ApiResponse(responseCode = "200", description = "Token renovado com sucesso"),
       @ApiResponse(responseCode = "401", description = "Token inválido ou expirado")
@@ -133,8 +132,7 @@ public class AuthController {
   }
 
   @PostMapping("/logout")
-  @Operation(summary = "🚪 Realizar logout", description = "🔐 **Requer JWT Token** - Invalida token JWT atual.")
-  @SecurityRequirement(name = "bearerAuth")
+  @Operation(summary = "🚪 Realizar logout", description = "🔐 **Requer apenas JWT Token** - Invalida token JWT atual.", security = {@SecurityRequirement(name = "bearerAuth")})
   @ApiResponses(value = {
       @ApiResponse(responseCode = "200", description = "Logout realizado com sucesso"),
       @ApiResponse(responseCode = "401", description = "Token inválido")
@@ -150,10 +148,7 @@ public class AuthController {
   }
 
   @GetMapping("/me")
-  @Operation(summary = "👤 Obter dados do usuário", description = "🔐 **Requer Autenticação Tripla** - JWT + API Key + Application Token.")
-  @SecurityRequirement(name = "bearerAuth")
-  @SecurityRequirement(name = "apiKey")
-  @SecurityRequirement(name = "applicationToken")
+  @Operation(summary = "👤 Obter dados do usuário", description = "🔐 **Requer Autenticação Dupla** - JWT + Application Token.")
   @ApiResponses(value = {
       @ApiResponse(responseCode = "200", description = "Dados do usuário retornados com sucesso"),
       @ApiResponse(responseCode = "401", description = "Token inválido")

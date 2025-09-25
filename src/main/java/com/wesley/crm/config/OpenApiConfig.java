@@ -4,6 +4,7 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -29,6 +30,9 @@ public class OpenApiConfig {
                         .type(SecurityScheme.Type.APIKEY)
                         .in(SecurityScheme.In.HEADER)
                         .name("X-App-Token")
-                        .description("Token da aplicação (renova a cada 15min)")));
+                        .description("Token da aplicação (renova a cada 15min)")))
+            .addSecurityItem(new SecurityRequirement()
+                .addList("bearerAuth")
+                .addList("appToken"));
     }
 }
