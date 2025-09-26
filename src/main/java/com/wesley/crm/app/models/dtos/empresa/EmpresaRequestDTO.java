@@ -1,6 +1,7 @@
 package com.wesley.crm.app.models.dtos.empresa;
 
 import jakarta.validation.constraints.*;
+import com.wesley.crm.app.validators.ValidCep;
 
 public class EmpresaRequestDTO {
     
@@ -28,19 +29,17 @@ public class EmpresaRequestDTO {
     @Size(max = 2, message = "Estado deve ter 2 caracteres")
     private String estado;
     
-    @Pattern(regexp = "\\d{5}-\\d{3}", message = "CEP deve estar no formato XXXXX-XXX")
+    @ValidCep
     private String cep;
     
     @Size(max = 100, message = "Setor não pode ter mais que 100 caracteres")
     private String setor;
     
-    private Integer numeroFuncionarios;
-    
     // Constructors
     public EmpresaRequestDTO() {}
     
     public EmpresaRequestDTO(String nome, String cnpj, String email, String telefone, String endereco,
-                           String cidade, String estado, String cep, String setor, Integer numeroFuncionarios) {
+                           String cidade, String estado, String cep, String setor) {
         this.nome = nome;
         this.cnpj = cnpj;
         this.email = email;
@@ -50,7 +49,6 @@ public class EmpresaRequestDTO {
         this.estado = estado;
         this.cep = cep;
         this.setor = setor;
-        this.numeroFuncionarios = numeroFuncionarios;
     }
     
     // Getters and Setters
@@ -126,11 +124,5 @@ public class EmpresaRequestDTO {
         this.setor = setor;
     }
     
-    public Integer getNumeroFuncionarios() {
-        return numeroFuncionarios;
-    }
-    
-    public void setNumeroFuncionarios(Integer numeroFuncionarios) {
-        this.numeroFuncionarios = numeroFuncionarios;
-    }
+
 }

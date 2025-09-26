@@ -4,6 +4,7 @@ import com.wesley.crm.domain.entities.Empresa;
 import com.wesley.crm.app.models.dtos.empresa.EmpresaRequestDTO;
 import com.wesley.crm.app.models.dtos.empresa.EmpresaResponseDTO;
 import com.wesley.crm.infra.database.EmpresaRepository;
+import com.wesley.crm.app.utils.CepUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -75,6 +76,10 @@ public class EmpresaService {
         dto.setEmail(empresa.getEmail());
         dto.setTelefone(empresa.getTelefone());
         dto.setEndereco(empresa.getEndereco());
+        dto.setCidade(empresa.getCidade());
+        dto.setEstado(empresa.getEstado());
+        dto.setCep(empresa.getCep());
+        dto.setSetor(empresa.getSetor());
         dto.setDataCriacao(empresa.getDataCriacao());
         dto.setDataAtualizacao(empresa.getDataAtualizacao());
         return dto;
@@ -87,6 +92,10 @@ public class EmpresaService {
         empresa.setEmail(dto.getEmail());
         empresa.setTelefone(dto.getTelefone());
         empresa.setEndereco(dto.getEndereco());
+        empresa.setCidade(dto.getCidade());
+        empresa.setEstado(dto.getEstado());
+        empresa.setCep(CepUtils.formatCep(dto.getCep()));
+        empresa.setSetor(dto.getSetor());
         return empresa;
     }
 
@@ -96,5 +105,9 @@ public class EmpresaService {
         empresa.setEmail(dto.getEmail());
         empresa.setTelefone(dto.getTelefone());
         empresa.setEndereco(dto.getEndereco());
+        empresa.setCidade(dto.getCidade());
+        empresa.setEstado(dto.getEstado());
+        empresa.setCep(CepUtils.formatCep(dto.getCep()));
+        empresa.setSetor(dto.getSetor());
     }
 }

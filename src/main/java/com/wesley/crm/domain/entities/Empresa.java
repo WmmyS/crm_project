@@ -49,6 +49,10 @@ public class Empresa {
     @Column(length = 10)
     private String cep;
 
+    @Size(max = 100, message = "Setor deve ter no máximo 100 caracteres")
+    @Column(length = 100)
+    private String setor;
+
     @Column(name = "data_criacao", updatable = false)
     private LocalDateTime dataCriacao;
 
@@ -150,6 +154,14 @@ public class Empresa {
 
     public void setCep(String cep) {
         this.cep = cep;
+    }
+
+    public String getSetor() {
+        return setor;
+    }
+
+    public void setSetor(String setor) {
+        this.setor = setor;
     }
 
     public LocalDateTime getDataCriacao() {

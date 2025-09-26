@@ -14,7 +14,6 @@ public class EmpresaResponseDTO {
     private String estado;
     private String cep;
     private String setor;
-    private Integer numeroFuncionarios;
     private LocalDateTime dataCriacao;
     private LocalDateTime dataAtualizacao;
     
@@ -23,7 +22,7 @@ public class EmpresaResponseDTO {
     
     public EmpresaResponseDTO(Long id, String nome, String cnpj, String email, String telefone,
                             String endereco, String cidade, String estado, String cep, String setor,
-                            Integer numeroFuncionarios, LocalDateTime dataCriacao, LocalDateTime dataAtualizacao) {
+                            LocalDateTime dataCriacao, LocalDateTime dataAtualizacao) {
         this.id = id;
         this.nome = nome;
         this.cnpj = cnpj;
@@ -34,7 +33,6 @@ public class EmpresaResponseDTO {
         this.estado = estado;
         this.cep = cep;
         this.setor = setor;
-        this.numeroFuncionarios = numeroFuncionarios;
         this.dataCriacao = dataCriacao;
         this.dataAtualizacao = dataAtualizacao;
     }
@@ -118,14 +116,6 @@ public class EmpresaResponseDTO {
     
     public void setSetor(String setor) {
         this.setor = setor;
-    }
-    
-    public Integer getNumeroFuncionarios() {
-        return numeroFuncionarios;
-    }
-    
-    public void setNumeroFuncionarios(Integer numeroFuncionarios) {
-        this.numeroFuncionarios = numeroFuncionarios;
     }
     
     public LocalDateTime getDataCriacao() {

@@ -9,7 +9,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
@@ -24,8 +23,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -37,7 +34,7 @@ public class ClienteController {
 
     @Autowired
     private ClienteService clienteService;
-    
+
     @Autowired
     private FileUploadService fileUploadService;
 
@@ -94,10 +91,8 @@ public class ClienteController {
     @PostMapping(value = "/com-imagem", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "➕ Criar cliente com imagem", description = "🔐 **Requer Autenticação Dupla** - Cria cliente e faz upload da imagem em uma única requisição.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Cliente criado com sucesso",
-            content = @Content(mediaType = "application/json", 
-                examples = @ExampleObject(value = "{\"id\": 1, \"nome\": \"João Silva\", \"email\": \"joao@email.com\", \"imagemUrl\": \"/uploads/clientes/abc123.jpg\"}"))),
-        @ApiResponse(responseCode = "400", description = "Dados inválidos ou arquivo muito grande")
+            @ApiResponse(responseCode = "201", description = "Cliente criado com sucesso", content = @Content(mediaType = "application/json", examples = @ExampleObject(value = "{\"id\": 1, \"nome\": \"João Silva\", \"email\": \"joao@email.com\", \"imagemUrl\": \"/uploads/clientes/abc123.jpg\"}"))),
+            @ApiResponse(responseCode = "400", description = "Dados inválidos ou arquivo muito grande")
     })
     public ResponseEntity<ClienteDTO> criarComImagem(
             @RequestParam("nome") String nome,
@@ -130,7 +125,8 @@ public class ClienteController {
 
     @PutMapping("/{id}")
     @Operation(summary = "✏️ Atualizar cliente", description = "🔐 **Requer Autenticação Dupla** - JWT + Application Token.")
-    public ResponseEntity<ClienteDTO> atualizar(@PathVariable Long id, @Valid @RequestBody ClienteRequestDTO clienteRequest) {
+    public ResponseEntity<ClienteDTO> atualizar(@PathVariable Long id,
+            @Valid @RequestBody ClienteRequestDTO clienteRequest) {
         try {
             ClienteDTO cliente = clienteService.atualizar(id, clienteRequest);
             return ResponseEntity.ok(cliente);
@@ -166,11 +162,9 @@ public class ClienteController {
     @PostMapping(value = "/{id}/imagem", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "🖼️ Upload de imagem", description = "🔐 **Requer Autenticação Dupla** - Faz upload da imagem do cliente (JPG, PNG, GIF - máx 5MB).")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Imagem enviada com sucesso",
-            content = @Content(mediaType = "application/json", 
-                examples = @ExampleObject(value = "{\"id\": 1, \"nome\": \"João Silva\", \"email\": \"joao@email.com\", \"imagemUrl\": \"/uploads/clientes/abc123.jpg\"}"))),
-        @ApiResponse(responseCode = "400", description = "Arquivo inválido ou muito grande"),
-        @ApiResponse(responseCode = "404", description = "Cliente não encontrado")
+            @ApiResponse(responseCode = "200", description = "Imagem enviada com sucesso", content = @Content(mediaType = "application/json", examples = @ExampleObject(value = "{\"id\": 1, \"nome\": \"João Silva\", \"email\": \"joao@email.com\", \"imagemUrl\": \"/uploads/clientes/abc123.jpg\"}"))),
+            @ApiResponse(responseCode = "400", description = "Arquivo inválido ou muito grande"),
+            @ApiResponse(responseCode = "404", description = "Cliente não encontrado")
     })
     public ResponseEntity<ClienteDTO> uploadImagem(@PathVariable Long id, @RequestParam("imagem") MultipartFile file) {
         try {
@@ -195,9 +189,8 @@ public class ClienteController {
     @GetMapping("/imagem/{filename}")
     @Operation(summary = "🖼️ Visualizar imagem", description = "🆓 **Endpoint PÚBLICO** - Retorna a imagem do cliente. Use o nome do arquivo da URL retornada no upload.", security = {})
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Imagem encontrada",
-            content = @Content(mediaType = "image/jpeg")),
-        @ApiResponse(responseCode = "404", description = "Imagem não encontrada")
+            @ApiResponse(responseCode = "200", description = "Imagem encontrada", content = @Content(mediaType = "image/jpeg")),
+            @ApiResponse(responseCode = "404", description = "Imagem não encontrada")
     })
     public ResponseEntity<Resource> visualizarImagem(@PathVariable String filename) {
         try {

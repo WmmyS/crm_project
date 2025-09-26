@@ -7,6 +7,7 @@ import com.wesley.crm.domain.entities.Empresa;
 import com.wesley.crm.infra.database.EmpresaRepository;
 import com.wesley.crm.infra.database.ClienteRepository;
 import com.wesley.crm.app.services.FileUploadService;
+import com.wesley.crm.app.utils.CepUtils;
 import com.wesley.crm.exceptions.CrmException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -92,7 +93,7 @@ public class ClienteService {
                     cliente.setEndereco(clienteRequest.getEndereco());
                     cliente.setCidade(clienteRequest.getCidade());
                     cliente.setEstado(clienteRequest.getEstado());
-                    cliente.setCep(clienteRequest.getCep());
+                    cliente.setCep(CepUtils.formatCep(clienteRequest.getCep()));
 
                     if (clienteRequest.getEmpresaId() != null) {
                         Empresa empresa = empresaRepository.findById(clienteRequest.getEmpresaId())
@@ -223,7 +224,7 @@ public class ClienteService {
         cliente.setEndereco(clienteRequest.getEndereco());
         cliente.setCidade(clienteRequest.getCidade());
         cliente.setEstado(clienteRequest.getEstado());
-        cliente.setCep(clienteRequest.getCep());
+        cliente.setCep(CepUtils.formatCep(clienteRequest.getCep()));
         cliente.setStatus(Cliente.StatusCliente.ATIVO); // Status padrão
 
         if (clienteRequest.getEmpresaId() != null) {

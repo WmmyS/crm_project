@@ -25,7 +25,7 @@ public class EmpresaController {
 
     @GetMapping
     public Page<EmpresaResponseDTO> listarTodas(
-            @PageableDefault(size = 20, sort = "razaoSocial", direction = Sort.Direction.ASC) Pageable pageable) {
+            @PageableDefault(size = 20, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable) {
         return empresaService.listarTodas(pageable);
     }
 
