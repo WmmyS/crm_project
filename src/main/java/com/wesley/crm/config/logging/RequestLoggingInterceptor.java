@@ -1,5 +1,6 @@
 package com.wesley.crm.config.logging;
 
+import com.wesley.crm.config.logging.RequestIdGenerator;
 import com.wesley.crm.domain.entities.AuditLog;
 import com.wesley.crm.domain.entities.User;
 import com.wesley.crm.infra.database.AuditLogRepository;
@@ -21,9 +22,19 @@ public class RequestLoggingInterceptor implements HandlerInterceptor {
     
     @Autowired
     private AuditLogRepository auditLogRepository;
+    
+    @Autowired
+    private RequestIdGenerator requestIdGenerator;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        // Gerar RequestId único
+        String requestId = requestIdGenerator.generateRequestId();
+        requestIdGenerator.setRequestId(requestId);
+        
+        // Adicionar RequestId no header de resposta
+        response.setHeader(requestIdGenerator.getRequestIdHeader(), requestId);
+        
         String method = request.getMethod();
         String uri = request.getRequestURI();
         String ip = getClientIpAddress(request);
@@ -38,11 +49,12 @@ public class RequestLoggingInterceptor implements HandlerInterceptor {
             userRole = user.getRole().toString();
         }
 
-        logger.info("🌐 REQUEST | {} {} | User: {} ({}) | IP: {}", 
-                method, uri, username, userRole, ip);
+        logger.info("🌐 REQUEST [{}] | {} {} | User: {} ({}) | IP: {}", 
+                requestId, method, uri, username, userRole, ip);
 
         request.setAttribute("startTime", System.currentTimeMillis());
         request.setAttribute("loggedUser", username);
+        request.setAttribute("requestId", requestId);
 
         return true;
     }
@@ -56,23 +68,27 @@ public class RequestLoggingInterceptor implements HandlerInterceptor {
         String method = request.getMethod();
         String uri = request.getRequestURI();
         String username = (String) request.getAttribute("loggedUser");
+        String requestId = (String) request.getAttribute("requestId");
         int status = response.getStatus();
 
         String errorMessage = null;
         if (ex != null) {
             errorMessage = ex.getMessage();
-            logger.error("❌ ERROR | {} {} | User: {} | Status: {} | Duration: {}ms | Error: {}", 
-                    method, uri, username, status, duration, errorMessage, ex);
+            logger.error("❌ ERROR [{}] | {} {} | User: {} | Status: {} | Duration: {}ms | Error: {}", 
+                    requestId, method, uri, username, status, duration, errorMessage, ex);
         } else {
             String statusIcon = getStatusIcon(status);
-            logger.info("{} RESPONSE | {} {} | User: {} | Status: {} | Duration: {}ms", 
-                    statusIcon, method, uri, username, status, duration);
+            logger.info("{} RESPONSE [{}] | {} {} | User: {} | Status: {} | Duration: {}ms", 
+                    statusIcon, requestId, method, uri, username, status, duration);
         }
 
         // Salvar no banco de dados (async)
         saveAuditLogAsync(username, (String) request.getAttribute("loggedUserRole"), 
                          method, uri, (String) request.getAttribute("clientIp"), 
-                         status, duration, errorMessage);
+                         status, duration, errorMessage, requestId);
+        
+        // Limpar RequestId da thread
+        requestIdGenerator.clearRequestId();
     }
 
     private String getClientIpAddress(HttpServletRequest request) {
@@ -100,13 +116,13 @@ public class RequestLoggingInterceptor implements HandlerInterceptor {
     @Async
     public void saveAuditLogAsync(String username, String userRole, String method, 
                                  String endpoint, String ipAddress, Integer statusCode, 
-                                 Long durationMs, String errorMessage) {
+                                 Long durationMs, String errorMessage, String requestId) {
         try {
             AuditLog auditLog = new AuditLog(username, userRole, method, endpoint, 
-                                           ipAddress, statusCode, durationMs, errorMessage);
+                                           ipAddress, statusCode, durationMs, errorMessage, requestId);
             auditLogRepository.save(auditLog);
         } catch (Exception e) {
-            logger.error("Erro ao salvar log de auditoria: {}", e.getMessage());
+            logger.error("Erro ao salvar log de auditoria [{}]: {}", requestId, e.getMessage());
         }
     }
 }

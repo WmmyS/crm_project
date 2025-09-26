@@ -38,11 +38,14 @@ public class AuditLog {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    @Column(name = "request_id", length = 36)
+    private String requestId;
+
     // Constructors
     public AuditLog() {}
 
     public AuditLog(String username, String userRole, String method, String endpoint, 
-                   String ipAddress, Integer statusCode, Long durationMs, String errorMessage) {
+                   String ipAddress, Integer statusCode, Long durationMs, String errorMessage, String requestId) {
         this.username = username;
         this.userRole = userRole;
         this.method = method;
@@ -51,6 +54,7 @@ public class AuditLog {
         this.statusCode = statusCode;
         this.durationMs = durationMs;
         this.errorMessage = errorMessage;
+        this.requestId = requestId;
     }
 
     // Getters and Setters
@@ -83,4 +87,7 @@ public class AuditLog {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public String getRequestId() { return requestId; }
+    public void setRequestId(String requestId) { this.requestId = requestId; }
 }

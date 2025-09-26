@@ -26,6 +26,155 @@ Sistema de CRM (Customer Relationship Management) desenvolvido em Java com Sprin
 - Relatórios e estatísticas
 - Documentação automática com Swagger
 
+---
+
+## 📊 Sistema de Logs Centralizados
+
+Este CRM implementa um **sistema de logs dual** para auditoria completa e debug técnico:
+
+### **🔄 Dois Tipos de Logs:**
+1. **Logs Técnicos (Arquivos)** - Debug, erros detalhados, stack traces, performance
+2. **Logs de Auditoria (Banco)** - Ações de usuários, rotas acessadas, status das requisições
+
+### **🔗 Correlação por RequestId:**
+- **UUID único** gerado para cada requisição
+- **Header de resposta**: `X-Request-Id: <uuid>`
+- **Correlação completa**: Mesmo RequestId nos logs de arquivo e banco
+- **Rastreabilidade total**: Possível acompanhar toda a jornada de uma requisição
+
+### **📁 Logs Técnicos (Arquivos):**
+```
+🌐 REQUEST [a1b2c3d4-e5f6-7890] | POST /api/clientes | User: wesley (USER) | IP: 192.168.1.100
+✅ RESPONSE [a1b2c3d4-e5f6-7890] | POST /api/clientes | User: wesley | Status: 201 | Duration: 245ms
+❌ ERROR [a1b2c3d4-e5f6-7890] | GET /api/clientes/999 | User: wesley | Status: 404 | Error: Cliente não encontrado
+```
+
+**Características:**
+- **Localização**: `logs/crm-application.log`
+- **Rotação**: 10MB por arquivo, máximo 30 arquivos
+- **Retenção**: Máximo 1GB total
+- **Conteúdo**: Stack traces completos, detalhes técnicos
+
+### **🗄️ Logs de Auditoria (Banco):**
+
+**Tabela `audit_logs`:**
+| Campo | Tipo | Descrição |
+|-------|------|----------|
+| `id` | BIGINT | ID único do log |
+| `request_id` | VARCHAR(36) | UUID da requisição |
+| `username` | VARCHAR(100) | Usuário que fez a requisição |
+| `user_role` | VARCHAR(20) | Role do usuário (USER, ADMIN) |
+| `method` | VARCHAR(10) | Método HTTP (GET, POST, etc.) |
+| `endpoint` | VARCHAR(500) | Rota acessada |
+| `ip_address` | VARCHAR(45) | IP de origem |
+| `status_code` | INTEGER | Status HTTP da resposta |
+| `duration_ms` | BIGINT | Tempo de resposta em ms |
+| `error_message` | TEXT | Mensagem de erro (se houver) |
+| `created_at` | TIMESTAMP | Data/hora da requisição |
+
+**Índices Otimizados:**
+- `idx_audit_logs_request_id` - Busca por RequestId
+- `idx_audit_logs_username` - Busca por usuário
+- `idx_audit_logs_created_at` - Busca por período
+- `idx_audit_logs_endpoint` - Busca por rota
+- `idx_audit_logs_status_code` - Busca por status
+
+### **🔍 Consulta de Logs:**
+
+**Endpoints Disponíveis:**
+```bash
+# Listar logs de auditoria (paginado)
+GET /api/audit?page=0&size=50
+Authorization: Bearer <jwt-token>
+X-App-Token: <app-token>
+
+# Buscar por RequestId específico
+GET /api/audit/request/{requestId}
+Authorization: Bearer <jwt-token>
+X-App-Token: <app-token>
+```
+
+**Consultas SQL Úteis:**
+```sql
+-- Buscar todos os logs de uma requisição específica
+SELECT * FROM audit_logs WHERE request_id = 'a1b2c3d4-e5f6-7890';
+
+-- Requisições com erro de um usuário
+SELECT request_id, endpoint, error_message, created_at
+FROM audit_logs 
+WHERE username = 'wesley' AND status_code >= 400
+ORDER BY created_at DESC;
+
+-- Top 10 requisições mais lentas
+SELECT request_id, endpoint, duration_ms, username
+FROM audit_logs 
+ORDER BY duration_ms DESC 
+LIMIT 10;
+
+-- Atividade por usuário no último dia
+SELECT username, COUNT(*) as total_requests
+FROM audit_logs 
+WHERE created_at >= NOW() - INTERVAL '1 day'
+GROUP BY username
+ORDER BY total_requests DESC;
+```
+
+### **🧹 Políticas de Retenção:**
+
+**Logs Técnicos:**
+- **Rotação automática**: A cada 10MB
+- **Histórico**: Mantém 30 arquivos
+- **Limite total**: 1GB de logs
+- **Limpeza**: Arquivos antigos removidos automaticamente
+
+**Logs de Auditoria:**
+- **Retenção**: 90 dias
+- **Limpeza automática**: Todo dia às 2h da manhã
+- **Execução assíncrona**: Não impacta performance da aplicação
+
+### **🔧 Como Usar para Debug:**
+
+**Cenário: Usuário reporta erro**
+1. **Cliente informa o RequestId** (do header `X-Request-Id`)
+2. **Consulta no banco**: `SELECT * FROM audit_logs WHERE request_id = '<uuid>'`
+3. **Consulta no arquivo**: `grep "<uuid>" logs/crm-application.log`
+4. **Análise completa**: Contexto da auditoria + detalhes técnicos
+
+**Exemplo Prático:**
+```bash
+# 1. Usuário reporta erro com RequestId: a1b2c3d4-e5f6-7890
+
+# 2. Consulta rápida no banco
+curl -H "Authorization: Bearer <token>" \
+     -H "X-App-Token: <app-token>" \
+     http://localhost:8080/api/audit/request/a1b2c3d4-e5f6-7890
+
+# 3. Detalhes técnicos no arquivo
+grep "a1b2c3d4-e5f6-7890" logs/crm-application.log
+```
+
+### **🚀 Próximos Passos:**
+
+**Tela Administrativa:**
+- Interface web para consulta de logs
+- Filtros por usuário, período, status, endpoint
+- Visualização detalhada por RequestId
+- Export de relatórios
+
+**Integrações Futuras:**
+- **ELK Stack**: Elasticsearch + Logstash + Kibana
+- **Grafana + Loki**: Visualização e alertas
+- **DataDog/New Relic**: Monitoramento em produção
+- **Slack/Teams**: Alertas automáticos para erros críticos
+
+**Métricas Avançadas:**
+- Dashboard de performance por endpoint
+- Alertas para requisições lentas (> 5s)
+- Monitoramento de taxa de erro por usuário
+- Análise de padrões de uso
+
+---
+
 ## 🔐 Sistema de Autenticação Dupla
 
 Este CRM implementa um **sistema de autenticação dupla obrigatória** para máxima segurança:
