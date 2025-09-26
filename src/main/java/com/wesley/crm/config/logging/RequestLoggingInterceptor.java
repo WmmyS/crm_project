@@ -51,9 +51,19 @@ public class RequestLoggingInterceptor implements HandlerInterceptor {
 
         logger.info("🌐 REQUEST [{}] | {} {} | User: {} ({}) | IP: {}", 
                 requestId, method, uri, username, userRole, ip);
+        
+        // Debug: Log todos os headers relacionados a IP para troubleshooting
+        if (logger.isDebugEnabled()) {
+            logger.debug("IP Headers - X-Forwarded-For: {}, X-Real-IP: {}, Remote-Addr: {}", 
+                    request.getHeader("X-Forwarded-For"), 
+                    request.getHeader("X-Real-IP"), 
+                    request.getRemoteAddr());
+        }
 
         request.setAttribute("startTime", System.currentTimeMillis());
         request.setAttribute("loggedUser", username);
+        request.setAttribute("loggedUserRole", userRole);
+        request.setAttribute("clientIp", ip);
         request.setAttribute("requestId", requestId);
 
         return true;
@@ -83,8 +93,9 @@ public class RequestLoggingInterceptor implements HandlerInterceptor {
         }
 
         // Salvar no banco de dados (async)
-        saveAuditLogAsync(username, (String) request.getAttribute("loggedUserRole"), 
-                         method, uri, (String) request.getAttribute("clientIp"), 
+        String userRole = (String) request.getAttribute("loggedUserRole");
+        String clientIp = (String) request.getAttribute("clientIp");
+        saveAuditLogAsync(username, userRole, method, uri, clientIp, 
                          status, duration, errorMessage, requestId);
         
         // Limpar RequestId da thread
@@ -92,17 +103,56 @@ public class RequestLoggingInterceptor implements HandlerInterceptor {
     }
 
     private String getClientIpAddress(HttpServletRequest request) {
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-            return xForwardedFor.split(",")[0].trim();
+        // Lista de headers comuns para capturar IP real
+        String[] ipHeaders = {
+            "X-Forwarded-For",
+            "X-Real-IP", 
+            "X-Originating-IP",
+            "CF-Connecting-IP", // Cloudflare
+            "True-Client-IP",   // Akamai
+            "Proxy-Client-IP",
+            "WL-Proxy-Client-IP",
+            "HTTP_X_FORWARDED_FOR",
+            "HTTP_X_FORWARDED",
+            "HTTP_X_CLUSTER_CLIENT_IP",
+            "HTTP_CLIENT_IP",
+            "HTTP_FORWARDED_FOR",
+            "HTTP_FORWARDED",
+            "HTTP_VIA",
+            "REMOTE_ADDR"
+        };
+        
+        for (String header : ipHeaders) {
+            String ip = request.getHeader(header);
+            if (ip != null && !ip.isEmpty() && !"unknown".equalsIgnoreCase(ip)) {
+                // Se contém múltiplos IPs (separados por vírgula), pega o primeiro
+                if (ip.contains(",")) {
+                    ip = ip.split(",")[0].trim();
+                }
+                // Valida se é um IP válido (não localhost interno)
+                if (isValidIp(ip)) {
+                    return ip;
+                }
+            }
         }
         
-        String xRealIp = request.getHeader("X-Real-IP");
-        if (xRealIp != null && !xRealIp.isEmpty()) {
-            return xRealIp;
+        // Fallback para o IP direto da requisição
+        String remoteAddr = request.getRemoteAddr();
+        return remoteAddr != null ? remoteAddr : "unknown";
+    }
+    
+    private boolean isValidIp(String ip) {
+        // Rejeita IPs inválidos ou internos comuns
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            return false;
         }
         
-        return request.getRemoteAddr();
+        // Rejeita localhost e IPs internos comuns
+        if (ip.equals("127.0.0.1") || ip.equals("0:0:0:0:0:0:0:1") || ip.equals("::1")) {
+            return false;
+        }
+        
+        return true;
     }
 
     private String getStatusIcon(int status) {

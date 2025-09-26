@@ -47,6 +47,7 @@ public class SecurityConfig {
         .authorizeHttpRequests(authz -> authz
             // Endpoints públicos (login e cadastro)
             .requestMatchers("/api/auth/app-login", "/api/auth/login", "/api/auth/register").permitAll()
+            .requestMatchers("/api/test/**").permitAll() // Endpoint de teste
             .requestMatchers("/debug/**").permitAll()
             .requestMatchers("/actuator/**").permitAll()
             .requestMatchers("/swagger-ui/**").permitAll()
