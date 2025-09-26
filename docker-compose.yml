@@ -30,6 +30,7 @@ services:
       DB_PASSWORD: crm_password
     volumes:
       - ./uploads:/app/uploads
+      - ./logs:/app/logs
     depends_on:
       - postgres
     networks:
